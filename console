@@ -96,7 +96,7 @@ sub shell_exec {
     my ($cmd) = @_;
     syslog($cmd);
     system($cmd);
-    return $? >> 8;
+    return ($? >> 8) == 0;
 }
 
 sub cmd_init_help {
@@ -538,7 +538,7 @@ sub cmd_build {
     shell_exec("echo '$mirror' > $destdir/scripts/localmirrors") if $mirror;
 
     syslog('--------------------------------------------');
-    shell_exec("yes '' | make  -C $destdir oldconfig >/dev/null");
+    return unless shell_exec("yes '' | make  -C $destdir oldconfig >/dev/null");
     my $t1 = time();
     shell_exec("make  -C $destdir -j $job $opt");
     my $t2 = time();
@@ -704,7 +704,7 @@ sub cmd_menuconfig {
         shell_exec("rm -f $destdir/.config");
     }
     shell_exec("make -C $destdir menuconfig");
-    shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    return unless shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
     shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
     shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime())) if $config and -f $config;
     shell_exec("mv $destdir/.config.new $config") if $config;
@@ -746,7 +746,7 @@ sub cmd_diffconfig {
     build_make_symlink($destdir);
     shell_exec("make -C $destdir defconfig") unless -f "openwrt/scripts/config/conf";
     shell_exec("cp -f $config $destdir/.config");
-    shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    return unless shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
     shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
     shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime()));
     shell_exec("mv $destdir/.config.new $config");
