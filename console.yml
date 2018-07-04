@@ -1,0 +1,252 @@
+subtree:
+    - openwrt
+    - packages
+    - luci
+    - routing
+    - telephony
+
+mirror:
+    openwrt:
+        openwrt:   https://git.openwrt.org/openwrt/openwrt.git
+        archive:   https://git.openwrt.org/openwrt/svn-archive/openwrt.git
+        packages:  https://git.openwrt.org/feed/packages.git
+        luci:      https://git.openwrt.org/project/luci.git
+        routing:   https://git.openwrt.org/feed/routing.git
+        telephony: https://git.openwrt.org/feed/telephony.git
+        newpackages: https://gitee.com/phoenix-openwrt/newpackages.git
+        ralink :     https://gitee.com/phoenix-openwrt/ralink.git
+
+
+    github:
+        openwrt:   https://github.com/openwrt/openwrt.git
+        archive:   https://github.com/openwrt-org/svn-archive.git
+        packages:  https://github.com/openwrt/packages.git
+        luci:      https://github.com/openwrt/luci.git
+        routing:   https://github.com/openwrt-routing/packages.git
+        telephony: https://github.com/openwrt/telephony.git
+        newpackages: https://gitee.com/phoenix-openwrt/newpackages.git
+        ralink :     https://gitee.com/phoenix-openwrt/ralink.git
+
+    gitee:
+        openwrt:   https://gitee.com/openwrt-mirrors/openwrt.git
+        archive:   https://gitee.com/openwrt-mirrors/svn-archive.git
+        packages:  https://gitee.com/openwrt-mirrors/packages.git
+        luci:      https://gitee.com/openwrt-mirrors/luci.git
+        routing:   https://gitee.com/openwrt-mirrors/routing.git
+        telephony: https://gitee.com/openwrt-mirrors/telephony.git
+        newpackages: https://gitee.com/phoenix-openwrt/newpackages.git
+        ralink :     https://gitee.com/phoenix-openwrt/ralink.git
+
+commit:
+    - name: initial
+      type: initial
+      dict:
+        # cvs initial
+        #openwrt0:  1bcf20d189b488c43f8f2243c8f8ace16973a128
+        # add openwrt directory
+        #openwrt1:  76d90c2ed2956d27e0c8af8fb0b76b3069228d5f
+        # clean
+        #openwrt2:  15bee86fc3df92f0bbdf0a17eac3915965983396
+        # move openwrt directory to trunk
+        openwrt:   60c1f0f64d23003a19a07d6b9638542130f6641d
+        packages:  ~
+        luci:      3f5de3273c9e103b4909802e339db06fe0b53312
+        routing:   a08279446f3aaa7a8686f709d193daa3cb483058
+        telephony: ~
+
+    - name: 12.09
+      type: branch
+      dict:
+        openwrt:   8e6ea0d1b7a66631f71cfde899b2114b9e1c952a
+        packages:  ~
+        luci:      9939dd2f72f42e547b6ad4cd3c9c068516fa0113
+        routing:   1e99610f2680ec75c9422504fa2c09b8e41716c0
+        telephony: ~
+
+    - name: 12.09.0
+      type: tag
+      dict:
+        openwrt:   506ec5f7f4b92fea9cee93ad576f8e760034b91b
+        packages:  ~
+        luci:      adc4c2932ec7039a6b7effeace098e5bc46861c6
+        routing:   1e99610f2680ec75c9422504fa2c09b8e41716c0
+        telephony: ~
+
+    - name: 12.09.0-20160425
+      type: tag
+      dict:
+        openwrt:   a45ef5ccbad1b751823adaad16931b4c41f0f68f
+        luci:      668f8ed7a09f3118038e604a234651250c0807e1
+        routing:   847812a6450b99beb0cd5d8a6a8a9d0a82a628a6
+
+    - name: initial
+      type: initial
+      dict:
+        openwrt:   ~
+        packages:  a22de9b74cf9579d1ce7e6cf1845b4afa4277b00
+        luci:      ~
+        routing:   ~
+        telephony: 917f92deb3ca0c0d8fa15e8147e0ec921470bdb4
+
+
+    - name: 14.07
+      type: branch
+      dict:
+        openwrt:   c6d19927013c52d73d6fa5212da0af7c37361266
+        packages:  071481e626b2ceef944c85999414cbcfa6331006
+        luci:      3ccdaa9b48f5da6073ac5f0badd23de2e18f3242
+        routing:   ba11f8d9d3f5e6aebb21ea952ac52ad1bf8474a4
+        telephony: 12485ef0ef44bbf43a126365e229736c6c83fdd7
+
+    - name: 14.07.0
+      type: tag
+      dict:
+        openwrt:   ce4220c05045edf72c306398d14632e9ce8fe4bc
+        packages:  bdb8dd7dd7fd35d134d382a2f9b4e590a8b0967f
+        luci:      77eaad64ce6df9f456ae5f485e7d02f10c0968b7
+        routing:   47f74d0041962f2061a67ef949ab12378701fc4a
+        telephony: d1b156498c532ca15250a52b16d5ff320db20f61
+
+    - name: 14.07.0-20160425
+      type: tag
+      dict:
+        openwrt:   36dcf68c7d9cd2123cd3c2750219a2280f532252
+        packages:  fe038181ef9737b9eaec5b008470add07674ba18
+        luci:      0d510b28203d33c6969ae5549f37f8b39811dd2e
+        routing:   fddd88b1d3ead6739caa055e513868cb5a14a204
+        telephony: d762c0ee3809a86468c82330ceb987df7033dd08
+
+    - name: 15.05
+      type: branch
+      dict:
+        openwrt:   b20a2b48901195a79d86eaecb386d45fe5d63c39
+        packages:  f55314de0ed1d91c8143946e101515c70587565b
+        luci:      e11b5e49f894af7f63ade77d06b87177249c8649
+        routing:   874d309addb744a65f2db38eb9e4af7d34c1dca6
+        telephony: 608a59a693e8b0b1edeed6079196745bfcab6c7e 
+
+    - name: 15.05.0
+      type: tag
+      dict:
+        openwrt:   64e92d3b75f58bdd4820f9c4147518bfe3556684
+        packages:  fd2374e5ff2ad66cd523f0d1274dfe9ade1e7127
+        luci:      3836b457b6126724452436d997de115d6772d950
+        routing:   f2a462fa65946f88c1acc0f1618a3633d406a748
+        telephony: d4ca5e50e63524356f6be8ff97d18086bc3d4578
+
+    - name: 15.05.1
+      type: tag
+      dict:
+        openwrt:   06bf2a082b73f21894fd89eb0a9c5ca650483533
+        packages:  185f5ba9e53375be24bce67ac055cc36355ae603
+        luci:      3201903e37370028c99777577703d51775866ca6
+        routing:   57009dafe0a73e55362017276144c3bb3a9955f4
+        telephony: 757d8d1f7f161d9f89a22a1707326cb984a2a2dd
+
+    - name: 15.05.1-20160426
+      type: tag
+      dict:
+        openwrt:   4febeded8dfafa915e33ea2a641e32ae7f36f8c0
+        packages:  632c7899f74955e7f5383d7c55715e78ecbcca1d
+        luci:      c0ae328b63fc706d10b68462c9ba0242c5dda5a0
+        routing:   049cae3fe83561293349661d1fc9c86dcd41a542
+        telephony: 5ef9ebae811caace9750c5c3c872efc85b778236
+
+    - name: reboot
+      type: tag
+      dict:
+        openwrt:   ee53a240ac902dc83209008a2671e7fdcf55957a
+        packages:  0a6ca6ea0d428c49c77b56541fb544c14caa98d9
+        luci:      91511033564929af41fa1f57bccde7fbcb7f5620
+        routing:   1c8c961b98de41812ba231a1c381e6df20c0b7c6
+        telephony: 4b395e935801871a8c1b4c6834655c18d9792449
+
+    - name: 17.01
+      type: branch
+      dict:
+        openwrt:   b9a408c2b49ccfa0e906bda00ef77f4002e401fd
+        packages:  640d377622f315a60599ec6a8fd33da8de9d045b
+        luci:      44bf3f0c1640040561306caff39f34ac916b4357
+        routing:   eca18c2d621c18fed127680cfae5ed953771dcc2
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.0-rc1
+      type: tag
+      dict:
+        openwrt:   68a04dbb4271e98c4622e6471c0d600cb57fe75f
+        packages:  31d89be9e69bac261bfe7440512cb4e0f3356255
+        luci:      472dc4b9e2ca71c114f5da70cb612c1089b8daa7
+        routing:   a6c7413594a0e4b42dab42bb5fa68534e39b7d0c
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.0-rc2
+      type: tag
+      dict:
+        openwrt:   28b7d7f1dac725157c19236b8899e1c97f19cee9
+        packages:  06198d9c8c1ba061a0a5d566545a5c0bbce2b0a4
+        luci:      e306ee6c93c1ef600012f47e40dd75020d4ab555
+        routing:   dd36dd47bbd75defcb3c517cafe7a19ee425f0af
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.0
+      type: tag
+      dict:
+        openwrt:   ac733df99c78f54b4cf9a8710f70a506f73e66fc
+        packages:  ed90827282851ad93294e370860320f1af428bb2
+        luci:      a100738163585ae1edc24d832ca9bef1f34beef0
+        routing:   dd36dd47bbd75defcb3c517cafe7a19ee425f0af
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.1
+      type: tag
+      dict:
+        openwrt:   48461b5abc382b26edd0d2637f0f7b952bed90ba
+        packages:  f9e99848182fc7bc554e541ca133c22079d4041b
+        luci:      29fabe26399fbaecf9231e24f9ac1ee5773cafa6
+        routing:   04a37ef4309c2b67c64901eb8fbf3800b4c7bb35
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.2
+      type: tag
+      dict:
+        openwrt:   2da512ecf4631cd7812283f0931cf6bbf842a313
+        packages:  dc558eaa296686603c1730c1aab01f3ea69d7831
+        luci:      7f6fc1681f7becc514a58082e871f3855d3a123f
+        routing:   dbbad8472288498c17825303d834da3ee5030806
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
+
+    - name: 17.01.3
+      type: tag
+      dict:
+        openwrt:   df54a8f583a9afad356fb99a575d75b69c8c0dd4
+        packages:  21b2e3eb761ea79bf3a8d2b6368435887960f5c2
+        luci:      079f65a628a4c4179578c043d2905efea93bb167
+        routing:   d11075cd40a88602bf4ba2b275f72100ddcb4767
+        telephony: ac6415e61f147a6892fd2785337aec93ddc68fa9
+
+    - name: 17.01.4
+      type: tag
+      dict:
+        openwrt:   444add156f2a6d92fc15005c5ade2208a978966c
+        packages:  cd5c448758f30868770b9ebf8b656c1a4211a240
+        luci:      d3f0685d63c1291359dc5dd089c82fa1e150e0c6
+        routing:   d11075cd40a88602bf4ba2b275f72100ddcb4767
+        telephony: ac6415e61f147a6892fd2785337aec93ddc68fa9            
+
+    - name: 18.06
+      type: branch
+      dict:
+        openwrt:   7e15e21766661c29e9a9d2d9b12bdae35c775afe 
+        packages:  13c7705415ada557ba31d3e628addbb9b28224ee
+        luci:      f3b30512361584c61c9daa51650ad833072aa919 
+        routing:   453de2136e2f354b2d6c88270297f31d4de488ae 
+        telephony: ac71f923ccdf0a2797f1c3fc3ca8082a88d3b8fe
+
+    - name: 18.06.0-rc1
+      type: tag 
+      dict:
+        openwrt:   13f64a1e597e00e7bc9cf73866533f668482c4fa
+        packages:  d83dc7cfb81680eff063acb7343eb9d6b0c9a6ab 
+        luci:      c379f00e86a5fc5d05a8e967c5c5daa035a72359
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: 1195dafe98bca2d3a41383eb2723d0104d7f9046

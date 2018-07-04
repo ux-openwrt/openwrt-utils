@@ -1,0 +1,1170 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use POSIX 'setsid';
+use POSIX 'strftime';
+use Cwd 'abs_path';
+use File::Basename;
+#use Switch;
+#use YAML::Tiny;
+use YAML;
+use Getopt::Long;
+
+my $destdir = '';
+my $help = 0;
+
+main();
+
+sub main {
+    no strict 'refs';
+    $ENV{'LANG'} = 'en_US.UTF-8';
+    $ENV{'PATH'} = dirname(abs_path($0)) . ':' . $ENV{'PATH'};
+    Getopt::Long::Configure('bundling', 'no_ignore_case', 'pass_through', 'bundling_override');
+    my $cmd = shift @ARGV;
+    my $func = "cmd_$cmd" if $cmd;
+    if ($cmd and __PACKAGE__->can($func)) {
+        &$func(@ARGV);
+    } else {
+        cmd_help($cmd);
+        return -1;
+    }
+}
+
+sub cmd_help {
+    no strict 'refs';
+    my $cmd = shift;
+    my $func = "cmd_$cmd" if $cmd;
+
+    if ($cmd and __PACKAGE__->can($func)) {
+        $func = "${func}_help";
+        &$func() if __PACKAGE__->can($func);
+        return;
+    } elsif($cmd and $cmd ne '--help') {
+        print STDERR "Unknown command '$cmd'!\n";
+    }
+    print STDERR "Usage: $0 [COMMAND] [OPTION]\n\n";
+    print STDERR "Available commands\n";
+    print STDERR "  init           Init git repository.\n";
+    print STDERR "  update         Update git repository.\n";
+    print STDERR "  snapshot       Update snapshot commit from remote repository.\n";
+    print STDERR "  build          Build openwrt project.\n";
+    print STDERR "  gitlog         Show branch squashed log.\n";
+    print STDERR "  checklog       Check the package failed to compile from build.log.\n";
+    print STDERR "  checklog2      Check the package failed to compile from package log.\n";
+    print STDERR "  defconfig      New config with default.\n";
+    print STDERR "  menuconfig     Update config utilising a menu based program.\n";
+    print STDERR "  diffconfig     Update config only include the necessary content.\n";
+}
+
+sub set_daemon {
+    return fork() unless shift;
+    pipe(PIPOUT, PIPOIN);
+    if(my $pid = fork()) {
+        waitpid($pid, 0);
+        while(not $pid = <PIPOUT>){};
+        close PIPOUT;
+        return int($pid);
+    }
+    close PIPOUT;
+    exit if fork();
+    #exit if fork();
+    setsid();
+    umask 002;
+    #chdir '/';
+    exit if fork();
+
+    print PIPOIN "$$\n";
+    close PIPOIN;
+    close STDIN;
+    open STDIN, '/dev/null';
+    close STDOUT;
+    open STDOUT, '>/dev/null';
+    close STDERR;
+    open STDERR, '>/dev/null';
+    return 0;
+}
+
+sub syslog {
+    my $msg = shift;
+    my $time = strftime('%Y-%m-%d %H:%M:%S', localtime());
+    printf STDERR ("[$time] $msg\n", @_) if $msg;
+    printf STDERR ("\n", @_) unless $msg;
+}
+
+sub shell_exec {
+    my ($cmd) = @_;
+    syslog($cmd);
+    system($cmd);
+    return $? >> 8;
+}
+
+sub cmd_init_help {
+    print STDERR "Usage: $0 init [OPTION]\n\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
+    print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to fetch repo.\n";
+    return 0;
+}
+
+sub cmd_init {
+    my $mirror = 'openwrt';
+    $destdir = 'phoenix-' . $$;
+    GetOptions('help|h'=>\$help, 'mirror|m=s'=>\$mirror, 'destdir|d=s'=>\$destdir);
+
+    return cmd_init_help() if $help;
+
+    if(not $mirror) {
+        syslog('mirror can not be empty!');
+        return -1;
+    }
+
+    if(not $destdir) {
+        syslog('destdir can not be empty!');
+        return -1;
+    }
+    
+    if(-d $destdir) {
+        syslog("$destdir has already exists");
+        return -1;
+    }
+
+    my $yml = init_load_config();
+    if($yml->{commit}->[0]->{name} ne 'initial') {
+        syslog('initial commit not find in config!');
+        return -1;
+    }
+
+    git_init($destdir);
+    #chdir($destdir);
+    git_config('merge.renameLimit', 65536);
+    shell_exec('echo -e "*.o\n*.orig\n*.rej\n*.swp\n*.log\n.tags\ntags"' . " >'$destdir/.gitignore'");
+    shell_exec('echo -e "/build*/\n/downloads/\n/release/\nlocalmirrors"' . " >>'$destdir/.gitignore'");
+    shell_exec("echo OpenWrt >'$destdir/README.md'");
+    shell_exec("echo ============== >>'$destdir/README.md'");
+    shell_exec("echo >>'$destdir/README.md'");
+    shell_exec("echo Documentation >>'$destdir/README.md'");
+    shell_exec("echo ------------- >>'$destdir/README.md'");
+    shell_exec("echo >>'$destdir/README.md'");
+    shell_exec("echo License >>'$destdir/README.md'");
+    shell_exec("echo ------- >>'$destdir/README.md'");
+    shell_exec("echo >>'$destdir/README.md'");
+    shell_exec("echo This repository is under the GPLv2 license: >>'$destdir/README.md'");
+    shell_exec("echo >>'$destdir/README.md'");
+    shell_exec("echo '    LICENSE' >>'$destdir/README.md'");
+    shell_exec("mkdir '$destdir/defconfig'");
+    shell_exec("echo >'$destdir/defconfig/README.md'");
+    git_add('.');
+    git_commit(0, 'Initialize repository');
+
+    init_set_git_core();
+
+    foreach my $subtree (@{$yml->{subtree}}) {
+        syslog('subtree->%s', $subtree);
+        my $name = $yml->{commit}->[0]->{name};
+        my $branch = 'master';
+        my $prefix = init_get_subtree_prefix($subtree);
+        my $commit = $yml->{commit}->[0]->{dict}->{$subtree};
+        my $remote = init_get_remote_name($subtree, $branch, 0);
+        my $url = $yml->{mirror}->{$mirror}->{$remote};
+        $remote = init_get_remote_name($subtree, $branch, 1);
+        syslog('no commit, skip!') unless $commit;
+        syslog('no remote url, skip!') unless $url;
+        goto _next unless $commit and $url;
+        syslog('merge %s->%s', $prefix, $commit);
+        git_remote_add($remote, $url);
+        last if git_fetch($remote);
+        last if git_subtree_add($prefix, $commit);
+        $ENV{"GIT_EDITOR"} = "sed -E -i \"s@(Merge commit '[a-f0-9]*').*@\\1 as '$prefix' for '$name'@\"";
+        git_commit(1);
+_next:
+        syslog();
+    }
+}
+
+sub cmd_update_help {
+    print STDERR "Usage: $0 update [OPTION]\n\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
+    print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to fetch repo.\n";
+    print STDERR "  -s, --stop=[COMMIT]      stop at COMMIT.\n";
+    print STDERR "  -k, --keep               keep squash message.\n";
+    print STDERR "      --snapshot           enable snapshot commit.\n";
+}
+
+sub cmd_update {
+    my ($mirror, $stop, $savepoint) = ('openwrt', '', '');
+    my ($stash, $keep, $snapshot) = (0, 0, 0);
+    $destdir = 'phoenix';
+    GetOptions(
+        'help|h'      => \$help,
+        'mirror|m=s'  => \$mirror,
+        'destdir|d=s' => \$destdir,
+        'stop|s=s'    => \$stop,
+        'keep|k'      => \$keep,
+        'snapshot'    => \$snapshot
+    );
+
+    return cmd_update_help() if $help;
+
+    if(not $mirror) {
+        syslog('mirror can not be empty!');
+        return -1;
+    }
+
+    if(not $destdir) {
+        syslog('destdir can not be empty!');
+        return -1;
+    }
+    
+    if(not -d "$destdir/.git") {
+        syslog("$destdir is not a git repository");
+        return -1;
+    }
+
+    my $yml = init_load_config();
+
+    #chdir($destdir);
+    git_config('merge.renameLimit', 65536);
+
+    if(git_status('You have unmerged paths.')) {
+        syslog('You have unmerged paths. fix conflicts or abort merge.');
+        return -1;
+    }
+
+    if(not git_status('nothing to commit, working tree clean')) {
+        git_stash_save();
+        $stash = 1;
+    }
+
+    init_set_git_core($keep);
+
+    foreach my $dict (@{$yml->{commit}}) {
+        my $name = $dict->{name};
+        my $branch = init_get_branch_name($name);
+        $branch = 'master' if $dict->{type} eq 'initial';
+        syslog('%s->%s', $dict->{type}, $name);
+        syslog('branch->%s', $branch);
+        if(not $snapshot and $dict->{type} eq 'snapshot') {
+            syslog('skip snapshot!');
+            syslog();
+            last if $name eq $stop;
+            next;
+        }
+        if(git_branch_exists($branch)) {
+            git_checkout($branch);
+        } else {
+            git_checkout('master');
+        }
+        $savepoint = git_head();
+        syslog('savepoint->%s', $savepoint);
+        syslog();
+        foreach my $subtree (@{$yml->{subtree}}) {
+            syslog('subtree->%s', $subtree);
+            my $prefix = init_get_subtree_prefix($subtree);
+            my $commit = $dict->{dict}->{$subtree};
+            my $remote = init_get_remote_name($subtree, $name, 0);
+            my $url = $yml->{mirror}->{$mirror}->{$remote};
+            $remote = init_get_remote_name($subtree, $name, 1);
+            syslog('no commit, skip!') unless $commit;
+            syslog('no remote url, skip!') unless $url;
+            goto _next unless $commit and $url;
+            syslog('remote->%s', $remote);
+            syslog('merge %s->%s', $prefix, $commit);
+            if(git_subtree_merged($prefix, $commit)) {
+                syslog('merged, skip it!');
+                goto _next;
+            }
+            if(git_remote_exists($remote)) {
+                git_remote_set_url($remote, $url);
+            } else {
+                git_remote_add($remote, $url);
+            }
+            goto _fail if git_fetch($remote);
+            $ENV{"GIT_EDITOR"} = "sed -E -i \"s@(Merge commit '[a-f0-9]*').*@\\1 as '$prefix' for '$name'@\"";
+
+            if(git_subtree_latest($prefix, '')) {
+                my $code = git_subtree_merge($prefix, $commit);
+                if(git_status('You have unmerged paths.')) {
+                    goto _fail if init_drop_shell();
+                    if(git_status('All conflicts fixed')) {
+                        goto _fail if git_commit();
+                    }
+                } else {
+                    goto _fail if $code;
+                    goto _fail if git_commit(1);
+                }
+            } else {
+                goto _fail if git_subtree_add($prefix, $commit);
+                goto _fail if git_commit(1);
+            }
+_next:
+            syslog();
+        }
+        git_branch($branch) unless git_branch_exists($branch) or $savepoint eq git_head();
+        last if $name eq $stop;
+    }
+
+    git_stash_pop() if $stash;
+    return;
+
+_fail:
+    syslog('subtree merge fail, rollback!');
+    git_reset(1, $savepoint);
+    return;
+}
+
+sub cmd_snapshot_help {
+    print STDERR "Usage: $0 snapshot [OPTION]\n\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
+    print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to fetch repo.\n";
+    print STDERR "  -u, --until=[DATE]       snapshot date before DATE.\n";
+    print STDERR "  -b, --branch[BRANCH]     snapshot for BRANCH.\n";
+    print STDERR "  -f, --force              ship commit date check.\n";
+}
+
+sub cmd_snapshot {
+    my $force = 0;
+    my ($date, $branch, $until, $mirror) = ('0', 'master', '', 'openwrt');
+    GetOptions(
+        'help|h'      => \$help,
+        'destdir|d=s' => \$destdir,
+        'mirror|m=s'  => \$mirror,
+        'until|u=s'   => \$until,
+        'branch|b=s'  => \$branch,
+        'force|f'     => \$force
+    );
+    
+    return cmd_snapshot_help() if $help;
+
+    if(not $destdir) {
+        syslog("destdir can not be empty!");
+        return -1;
+    }
+    
+    if(not -d "$destdir/.git") {
+        syslog("$destdir is not a git repository");
+        return -1;
+    }
+
+    if(not $branch){
+        syslog('branch can not be empty!');
+        return -1;
+    }
+
+    my $yml = init_load_config();
+
+    #chdir($destdir);
+   
+    my $dict = {};
+    my $name = init_get_branch_name($branch);
+    foreach my $subtree (@{$yml->{subtree}}) {
+        my $remote = init_get_remote_name($subtree, "$branch.0", 0);
+        my $url = $yml->{mirror}->{$mirror}->{$remote};
+        $remote = init_get_remote_name($subtree, "$branch.0", 1);
+        my $branch2 = init_get_remote_branch_name($subtree, $branch);
+        my $branch3 = init_get_branch_name($branch);
+        my $prefix = init_get_subtree_prefix($subtree);
+        syslog('%s->%s/%s', $branch, $remote, $branch2); 
+        if(git_remote_exists($remote)) {
+            git_remote_set_url($remote, $url);
+        } else {
+            git_remote_add($remote, $url);
+        }
+        next if git_fetch($remote);
+        next unless git_branch_exists("$remote/$branch2"); 
+        my $commit = git_log("$remote/$branch2", '%H', $until);
+        my $cdate = git_log($commit, '%cd', '', 'raw');
+        my $commit1 = git_subtree_latest($prefix, $branch3);
+        my $cdate1 = git_log($commit1, '%cd', '', 'raw');
+        $cdate =~ s/ +.*//;
+        $cdate1 =~ s/ +.*//;
+        syslog('commit date->%s', strftime("%F %T",gmtime($cdate)));
+        syslog('branch date->%s', strftime("%F %T",gmtime($cdate1)));
+        if($cdate < $cdate1){
+            syslog('commit before branch head!');
+            return -1 until $force;
+        }
+        $date = $cdate if $date <= $cdate;
+        syslog('commit->%s', $commit);
+        $dict->{$subtree} = $commit;
+    }
+    syslog('name->%s', strftime("$branch-%Y%m%d",gmtime($date)));
+    #$yml = YAML::Tiny->new({'name'=>strftime("$branch.%Y%m%d",gmtime($date)),'type'=>'snapshot','dict'=>$dict});
+    #print $yml->write_string();
+    local $YAML::Indent = 4;
+    local $YAML::SortKeys = 0;
+    syslog('', $YAML::Indent, $YAML::SortKeys);
+    print Dump({'name'=>strftime("$branch-%Y%m%d",gmtime($date)),'type'=>'snapshot','dict'=>$dict});
+}
+
+sub cmd_gitlog_help {
+    print STDERR "Usage: $0 gitlog [OPTION]\n\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
+    print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to fetch repo.\n";
+    print STDERR "  -s, --subtree=[SUBTREE]  show log of SUBTREE.\n";
+    print STDERR "  -r, --revert             just show revert log.\n";
+}
+
+sub cmd_gitlog {
+    my $revert = 0;
+    my $subtree = 'openwrt';
+    my $branch = 'master';
+    GetOptions(
+        'help|h'      => \$help,
+        'branch|b=s'  => \$branch,
+        'destdir|d=s' => \$destdir,
+        'subtree|s=s' => \$subtree,
+        'revert|r'    => \$revert
+    );
+
+    return cmd_gitlog_help() if $help;
+
+    if(not $destdir) {
+        syslog('destdir can not be empty!');
+        return -1;
+    }
+    
+    if(not -d "$destdir/.git") {
+        syslog("$destdir is not a git repository");
+        return -1;
+    }
+
+    my $yml = init_load_config();
+
+    #chdir($destdir);
+ 
+    my $oldsub = '';
+    my $newsub = '';
+    my $branch2 = 'master';
+    foreach my $dict (@{$yml->{commit}}) {
+        next unless $dict->{dict}->{$subtree};
+        my $branch3 = $dict->{name};
+        $branch3 = 'master' if $dict->{type} eq 'initial';
+        $branch3 =~ s/initial|reboot|master.*|^\d\d\.\d\d$/master/g;
+        $branch3 =~ s/^(\d\d\.\d\d).*/$1/g;
+        next unless $branch3 eq 'master' or $branch3 eq $branch;
+        next if $branch2 ne 'master' and $branch3 eq 'master';
+        $newsub = $dict->{dict}->{$subtree};
+        syslog('subtree=%s, %s=%s', $subtree, $dict->{type}, $dict->{name});
+        syslog('%s..%s', $oldsub, $newsub);
+        system("git log --pretty=tformat:'%h %s' '$oldsub..$newsub' | cat") unless $revert; 
+        system("git log --pretty=tformat:'REVERT: %h %s' '$newsub..$oldsub' | cat") if $oldsub;
+        system('bash -c "read -p : -e -n 1"');
+        $branch2 = $branch3;
+        $oldsub = $newsub;
+    }
+}
+
+sub cmd_build_help {
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
+    print STDERR "  -f, --foreground         build foreground instead of daemon.\n";
+    print STDERR "  -j, --job=[JOB]          start JOB jobs to build.\n";
+    print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to download ball.\n";
+    print STDERR "      --clean              clean build tree before build.\n";
+    print STDERR "      --domain=[DOMAIN]    user DOMAIN as build domain.\n";
+    print STDERR "      --user=[USER]        user USER as build user.\n";
+}
+
+sub cmd_build {
+    my ($foreground,$clean) = (0) x 2;
+    my ($destdir,$config,$job,$mirror,$user,$domain) = ('') x 6;
+    GetOptions(
+        'help|h'      => \$help,
+        'foreground|f'=> \$foreground,
+        'destdir|d=s' => \$destdir,
+        'mirror|m=s'  => \$mirror,
+        'config|c=s'  => \$config,
+        'job|j=s'     => \$job,
+        'user=s'      => \$user,
+        'domain=s'    => \$domain,
+        'clean'       => \$clean
+    );
+
+    return cmd_build_help() if $help;
+
+    $destdir = 'build' unless $destdir;
+    $user = 'compile' unless $user;
+    $domain = 'ntcmd.org' unless $domain;
+    $job = cpu_get_slots() * cpu_get_cores() * 2 unless $job;
+    my $opt = "@ARGV";
+    
+    if(not $config) {
+        syslog('no config is specified!');
+        return 0;
+    }
+    if($destdir eq '.') {
+        syslog("can not build at $destdir!");
+        return 0;
+    }
+
+    if(not -f './openwrt/Makefile') {
+        syslog('there is no source code here!');
+        return 0;
+    }
+
+    if(not -f $config) {
+        syslog('$config is not exists!');
+        return 0;
+    }
+
+    shell_exec("mkdir -p $destdir") unless -d $destdir;
+    if(my $pid = set_daemon(not $foreground)) {
+        shell_exec("tail --pid=$pid -f $destdir/build.log");
+        return 0;
+    } else {
+        open STDOUT, ">$destdir/build.log";
+        open STDERR, '>&STDOUT';
+    }
+    shell_exec('rm -f openwrt/scripts/localmirrors');
+    build_clean_destdir($destdir) if $clean;
+    build_make_symlink($destdir);
+    shell_exec("cp -f $config $destdir/.config");
+
+    shell_exec("sed -i '/CONFIG_DEVEL[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/CONFIG_BUILD_LOG[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_USER[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_DOMAIN[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/CONFIG_BINARY_FOLDER[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/CONFIG_DOWNLOAD_FOLDER[ =]/d' $destdir/.config");
+    shell_exec("sed -i '/LOCALMIRROR[ =]/d' $destdir/.config");
+    shell_exec("echo 'CONFIG_DEVEL=y' >> $destdir/.config");
+    shell_exec("echo 'CONFIG_BUILD_LOG=y' >> $destdir/.config");
+    shell_exec("echo 'CONFIG_KERNEL_BUILD_USER=\"$user\"' >> $destdir/.config");
+    shell_exec("echo 'CONFIG_KERNEL_BUILD_DOMAIN=\"$domain\"' >> $destdir/.config",);
+    shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../release/\$(BOARD)\"' >> $destdir/.config");
+    shell_exec("echo 'CONFIG_DOWNLOAD_FOLDER=\"\$(TOPDIR)/../downloads\"' >> $destdir/.config");
+    #shell_exec("echo 'CONFIG_LOCALMIRROR=\"$mirror\"' >> $destdir/.config");
+    shell_exec("echo '$mirror' > $destdir/scripts/localmirrors") if $mirror;
+
+    syslog('--------------------------------------------');
+    shell_exec("yes '' | make  -C $destdir oldconfig >/dev/null");
+    my $t1 = time();
+    shell_exec("make  -C $destdir -j $job $opt");
+    my $t2 = time();
+    syslog('--------------------------------------------');
+    my $tx = $t2 - $t1;
+    syslog('time=%s', sprintf('%d:%d:%d', int($tx / 3600), int($tx / 60) % 60, $tx % 60));
+}
+
+sub cmd_checklog_help {
+
+}
+
+sub cmd_checklog {
+    my ($log, $edit) = (0) x 2;
+    my $destdir = 'build';
+    GetOptions(
+        'help|h'   => \$help,
+        'log|l'    => \$log,
+        'edit|e'   => \$edit,
+        'destdir|d=s' => \$destdir
+    );
+
+    return cmd_checklog_help() if $help;
+
+    my $f = "$destdir/build.log";
+    if($log and $edit) {
+        syslog('--log|-l can not with --edit|-e !');
+        return 0;
+    }
+    if(not -f $f) {
+        syslog('log file is not exists!');
+        return 0;
+    }
+    $destdir = 'build' unless $destdir;
+    my $text = qx(sed -n -e '/\\*\\*\\* \\[.*\\/\\(compile\\|install\\)\\]/p' $f);
+    $text =~ s/.*\*\*\* \[(.*)\/(compile|install)\].*/$1/g;
+    my $p = $text;
+    $p =~ s/package\/feeds\//feeds\//g;
+    print $p;
+    $text =~ s/\/host$//mg;
+    $text =~ s/\n/ /g;
+    if(not $text) {
+        syslog('no error!');
+        return 0;
+    }
+    if($log) {
+        my $l = $text;
+        $l =~ s/(\S+)/$destdir\/logs\/$1/g;
+        $l = qx(find $l -name '*.txt');
+        $l =~ s/\n/ /g;
+        system("vim $l");
+    } elsif($edit) {
+        my $e = $text;
+        $e =~ s/(\S+)/openwrt\/$1\/Makefile/g;
+        $e =~ s/openwrt\/package\/feeds\//feeds\//g;
+        system("vim $e");
+    }
+
+}
+
+sub cmd_checklog2_help {
+
+}
+
+sub cmd_checklog2 {
+    my ($log, $edit) = (0) x 2;
+    my $destdir = 'build';
+    GetOptions(
+        'help|h'      => \$help,
+        'log|l'       => \$log,
+        'destdir|d=s' => \$destdir
+    );
+
+    return cmd_checklog2_help() if $help;
+
+    if($log and $edit) {
+        syslog('--log|-l can not with --edit|-e !');
+        return 0;
+    }
+    $destdir = 'build' unless $destdir;
+    my $text = qx(grep -E '\\*\\*\\* \\[' -r $destdir/logs/ | awk -F: '{print \$1}' | uniq);
+    print $text;
+    $text =~ s/\n/ /g;
+    if(not $text) {
+        syslog('no error!');
+        return 0;
+    }
+    if($log) {
+        system("vim $text");
+    }
+}
+
+sub cmd_defconfig_help {
+
+}
+
+sub cmd_defconfig {
+    my ($destdir,$config) = ('') x 2;
+    GetOptions(
+        'help|h'      => \$help,
+        'destdir|d=s' => \$destdir,
+        'config|c=s'  => \$config
+    );
+
+    return cmd_defconfig_help() if $help;
+
+    $destdir = 'build' unless $destdir;
+    if($destdir eq '.') {
+        syslog("can not build at $destdir!");
+        return 0;
+    }
+
+    if(not -f './openwrt/Makefile') {
+        syslog('there is no source code here!');
+        return 0;
+    }
+
+    build_make_symlink($destdir);
+    if(-f $config) {
+        shell_exec("cp -f $config $destdir/.config");
+    } else {
+        shell_exec("rm -f $destdir/.config");
+    }
+    shell_exec("make -C $destdir menuconfig");
+    my $board = qx(sed -E -e '/^CONFIG_TARGET_BOARD/!d' -e 's/^[^"]*"|"\$//g' $destdir/.config);
+    $board =~ s/\s//g;
+    #shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    #shell_exec("cd $destdir; ./scripts/diffconfig.sh | grep CONFIG_TARGET_ > .config.new");
+    shell_exec("grep '^CONFIG_TARGET_${board}[_=]' $destdir/.config >$destdir/.config.new");
+    shell_exec("mv $config $config-" . strftime("%Y%m%d%H%M%S",localtime())) if $config and -f $config;
+    shell_exec("mv $destdir/.config.new $config") if $config;
+}
+
+sub cmd_menuconfig_help {
+
+}
+
+sub cmd_menuconfig {
+    my ($destdir,$config) = ('') x 2;
+    GetOptions(
+        'help|h'      => \$help,
+        'destdir|d=s' => \$destdir,
+        'config|c=s'  => \$config
+    );
+
+    return cmd_menuconfig_help() if $help;
+
+    $destdir = "build" unless $destdir;
+    if($destdir eq '.') {
+        syslog("can not build at $destdir!");
+        return 0;
+    }
+
+    if(not -f './openwrt/Makefile') {
+        syslog('there is no source code here!');
+        return 0;
+    }
+
+    build_make_symlink($destdir);
+    if(-f $config) {
+        shell_exec("cp -f $config $destdir/.config");
+    } else {
+        shell_exec("rm -f $destdir/.config");
+    }
+    shell_exec("make -C $destdir menuconfig");
+    shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
+    shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime())) if $config and -f $config;
+    shell_exec("mv $destdir/.config.new $config") if $config;
+}
+
+sub cmd_diffconfig_help {
+
+}
+
+sub cmd_diffconfig {
+    my ($destdir,$config) = ('') x 2;
+    GetOptions(
+        'help|h'      => \$help,
+        'destdir|d=s' => \$destdir,
+        'config|c=s'  => \$config
+    );
+
+    return cmd_diffconfig_help() if $help;
+
+    $destdir = 'build' unless $destdir;
+    if(not $config) {
+        syslog('no config is specified!');
+        return 0;
+    }
+    if($destdir eq '.') {
+        syslog("can not build at $destdir!");
+        return 0;
+    }
+
+    if(not -f './openwrt/Makefile') {
+        syslog('there is no source code here!');
+        return 0;
+    }
+
+    if(not -f $config) {
+        syslog("$config is not exists!");
+        return 0;
+    }
+    build_make_symlink($destdir);
+    shell_exec("make -C $destdir defconfig") unless -f "openwrt/scripts/config/conf";
+    shell_exec("cp -f $config $destdir/.config");
+    shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
+    shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime()));
+    shell_exec("mv $destdir/.config.new $config");
+}
+
+sub cpu_get_cores {
+    my $cnt = 0;
+    open(FH, '/proc/cpuinfo');
+    while(<FH>) {
+        if(/^cpu cores\s*:\s(\d*)$/) {
+            $cnt = $1;
+            last;
+        }
+    }
+    close(FH);
+    return $cnt;
+}
+
+sub cpu_get_siblings {
+    my $cnt = 0;
+    open(FH, '/proc/cpuinfo');
+    while(<FH>) {
+        if(/^siblings\s*:\s(\d*)$/) {
+            $cnt = $1;
+            last;
+        }
+    }
+    close(FH);
+    return $cnt;
+}
+
+sub cpu_get_processors {
+    my $cnt = 0;
+    open(FH, '/proc/cpuinfo');
+    while(<FH>) {
+        if(/^processor\s*:\s(\d*)$/) {
+            $cnt ++;
+        }
+    }
+    close(FH);
+    return $cnt;
+}
+
+sub cpu_get_slots {
+    my $cnt = 0;
+    open(FH, '/proc/cpuinfo');
+    while(<FH>) {
+        if(/^physical id\s*:\s(\d*)$/) {
+            $cnt = $1;
+        }
+    }
+    close(FH);
+    return $cnt + 1;
+}
+
+sub git_remote_get_url {
+    my ($remote) = @_;
+    my $cmd = "git remote get-url '$remote'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    my $url = qx($cmd);
+    return '' if $? >> 8;
+    $url =~ s/\s*$//g;
+    return $url;
+}
+
+sub git_remote_set_url {
+    my ($remote, $url) = @_;
+    my $cmd = "git remote set-url '$remote' '$url'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_remote_add {
+    my ($remote, $url, $fetch) = @_;
+    my $cmd = "git remote add";
+    $cmd .= " --fetch" if $fetch;
+    $cmd .= " '$remote' '$url'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_remote_exists {
+    my ($remote) = @_;
+    my $cmd = "git remote";
+    $cmd = "cd $destdir; $cmd";
+    return qx($cmd) =~ m/^$remote$/m;
+}
+
+sub git_status {
+    my ($text) = @_;
+    if($text) {
+        my $cmd = "git status";
+        $cmd = "cd $destdir; $cmd";
+        my $output = qx($cmd);
+        return $output =~ m/$text/m;
+    } else {
+        my $cmd = "git status --porcelain";
+        $cmd = "cd $destdir; $cmd";
+        return qx($cmd);
+    }
+}
+
+sub git_log {
+    my ($commit, $format, $until, $date) = @_;
+    my $cmd = "git log -1 $commit";
+    $cmd .= " --pretty=tformat:'$format'" if $format;
+    $cmd .= " --until='$until' --left-only" if $until;
+    $cmd .= " --date='$date'" if $date;
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    $output =~ s/\s+$//;
+    return $output;
+}
+
+sub git_commit {
+    my ($amend, $comments) = @_;
+    my $cmd = "git commit --allow-empty";
+    $cmd .= " --amend --date=0" if $amend;
+    $cmd .= " --message='$comments'" if $comments;
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    sleep(1);
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_reset {
+    my ($hard, $commit) = @_;
+    my $cmd = "git reset";
+    $cmd .= " --hard" if $hard;
+    $cmd .= " '$commit'" if $commit;
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_checkout {
+    my ($commit, $branch) = @_;
+    my $cmd = "git checkout '$commit'";
+    $cmd .= " -b '$branch'" if $branch;
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_head {
+    my $cmd = "git log -1 --pretty=%H";
+    $cmd = "cd $destdir; $cmd";
+    my $commit= qx($cmd);
+    $commit =~ s/\s*//g;
+    return $commit;
+}
+
+sub git_branch {
+    my ($branch) = @_;
+    my $cmd = "git branch '$branch'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_branch_exists {
+    my ($branch) = @_;
+    my $cmd = "git branch --list --all '$branch'";
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    $output =~ s/^\*?\s+|\s+$//g;
+    return $output;
+}
+
+sub git_init {
+    my ($path) = @_;
+    my $cmd = "git init '$path'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_config {
+    my ($name, $value) = @_;
+    my $cmd = "git config --local '$name' '$value'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_add {
+    my ($list) = @_;
+    my $cmd = "git add $list";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_fetch {
+    my ($remote) = @_;
+    my $cmd = "git fetch --tags '$remote'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_subtree_add {
+    my ($prefix, $commit, $branch) = @_;
+    my $cmd = '';
+    if($branch) {
+        my $remote = $commit;
+        $cmd = "git subtree add --squash --prefix='$prefix' '$remote' '$branch'";
+    } else {
+        $cmd = "git subtree add --squash --prefix='$prefix' '$commit'";
+    }
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    my $code = $? >> 8;
+    $output =~ s/ (.+ \||create mode|delete mode|rename|mode change) .+\n//g;
+    $output =~ s/(Removing|Auto-merging) .+\n//g;
+    print $output;
+    return $code;
+}
+
+sub git_subtree_merge {
+    my ($prefix, $commit) = @_;
+    my $cmd = "git subtree merge --squash --prefix='$prefix' '$commit'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    my $code = $? >> 8;
+    $output =~ s/ (.+ \||create mode|delete mode|rename|mode change) .+\n//g;
+    $output =~ s/(Removing|Auto-merging) .+\n//g;
+    print $output;
+    return $code;
+}
+
+sub git_subtree_pull {
+    my ($prefix, $remote, $branch) = @_;
+    my $cmd = "git subtree pull --squash --prefix='$prefix' '$remote' '$branch'";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    my $code = $? >> 8;
+    $output =~ s/ (.+ \||create mode|delete mode|rename|mode change) .+\n//g;
+    $output =~ s/(Removing|Auto-merging) .+\n//g;
+    print $output;
+    return $code;
+}
+
+sub git_subtree_merged {
+    my ($prefix, $commit) = @_;
+    my $cmd = "git log --pretty=%H --all-match --grep='^git-subtree-split: $commit\$'";
+    $cmd .= " --grep='^git-subtree-dir: $prefix\$'" if $prefix;
+    #syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    $output =~ s/\s+$//g;
+    #syslog("subtree$prefix->%s\n%s", $commit, $output);
+    return $output;
+}
+
+sub git_subtree_latest {
+    my ($subtree, $branch) = @_;
+    my $cmd = "git log -1 $branch --grep='^git-subtree-dir: $subtree\$' | grep git-subtree-split";
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    $output =~ s/^\s+git-subtree-split: |\s+$//g;
+    return $output;
+}
+
+sub git_subtree_list {
+    my ($subtree) = @_;
+    my $cmd = "git log --grep='^git-subtree-dir: $subtree\$' | grep git-subtree-split";
+    $cmd = "cd $destdir; $cmd";
+    my $output = qx($cmd);
+    $output =~ s/^\s+git-subtree-split: //mg;
+    return split(/\s/, $output);
+}
+
+sub git_stash_save {
+    my $cmd = "git stash save --include-untracked";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub git_stash_pop {
+    my $cmd = "git stash pop";
+    syslog($cmd);
+    $cmd = "cd $destdir; $cmd";
+    system($cmd);
+    return $? >> 8;
+}
+
+sub init_set_git_core {
+    my ($keep) = @_;
+    my $path = dirname($0);
+    my $gitpath = qx(git --exec-path);
+    $gitpath =~ s/\s*$//;
+    shell_exec("rm -rf '$path/git-core'") if -d "$path/git-core";
+    shell_exec("mkdir '$path/git-core'");
+    shell_exec("ln -s '$gitpath/'* '$path/git-core/'");
+    shell_exec("rm -f '$path/git-core/git-subtree'");
+    shell_exec("cp -f '$gitpath/git-subtree' '$path/git-core/'") if -f "$gitpath/git-subtree";
+    shell_exec("cp -f '$path/git-subtree' '$path/git-core/'") unless -f "$gitpath/git-subtree";
+    shell_exec("sed -i -e 's/git log --pretty=tformat/#\\0/' '$path/git-core/git-subtree'") unless $keep ;
+    $ENV{'GIT_EXEC_PATH'} = abs_path("$path/git-core");
+}
+
+sub init_get_remote_name {
+    my ($remote, $name, $prefix) = @_;
+    $remote = 'archive' if $remote eq 'openwrt' and $name lt '17.01' and not $name =~ /^(12.09|14.07|15.05)$/;
+    return "origin-$remote" if $prefix;
+    return $remote;
+}
+
+sub init_get_subtree_prefix {
+    my ($subtree) = @_;
+    return $subtree if $subtree eq 'openwrt';
+    return "feeds/$subtree";
+}
+
+sub init_get_branch_name {
+    my ($name) = @_;
+    $name =~ s/master.*|^\d{8}$|reboot|initial/master/;
+    return $name if $name eq "master";
+    $name =~ s/(\d\d\.\d\d).*/$1/;
+    return "openwrt-$name";
+}
+
+sub init_get_remote_branch_name {
+    my ($remote, $name) = @_;
+    return $name if $name eq 'master';
+    $name =~ s/(\d\d\.\d\d).*/$1/;
+    return "openwrt-$name" if $name ge '18.06';
+    return "lede-$name" if $name eq '17.01';
+    return 'attitude_adjustment' if "$remote-$name" eq 'openwrt-12.09';
+    return 'barrier_breaker' if "$remote-$name" eq 'openwrt-14.07';
+    return 'chaos_calmer' if "$remote-$name" eq 'openwrt-15.05';
+    return 'luci-0.12' if "$remote-$name" eq 'luci-14.07';
+    return 'luci-0.11' if "$remote-$name" eq 'luci-12.09';
+    return 'for-12.09.x' if "$remote-$name" eq 'routing-12.09';
+    return "for-$name";  
+}
+
+sub init_drop_shell {
+    $ENV{'PS1'} = 'git\s-\v \#\$';
+    while(git_status('You have unmerged paths.')) {
+        syslog('please fix conflicts ...');
+        system("cd '$destdir'; /bin/bash");
+        return 1 if $? >> 8 == 1;
+    }
+    return 0;
+}
+
+sub init_load_config {
+    my $name = basename($0, '.pl') . '.yml';
+    my $path = dirname($0);
+    return if not -f "$path/$name";
+    #my $yml = YAML::Tiny->read("$path/$name");
+    open my $fd, "$path/$name";
+    my $n = $/;
+    undef $/;
+    my $yml = Load(<$fd>);
+    close $fd;
+    return $yml;
+}
+
+sub build_clean_destdir {
+    my $destdir = shift;
+    #shell_exec('rm -f openwrt/scripts/localmirrors');
+    shell_exec('rm -f openwrt/scripts/config/zconf.lex.c');
+    shell_exec('rm -f openwrt/scripts/config/mconf_check');
+    shell_exec("find openwrt/scripts \\( -name '*.o' -o  -name '*conf' \\) -a -xtype f -delete");
+    opendir(FD, $destdir);
+    foreach my $name (readdir FD) {
+        next if $name eq '.' or $name eq '..' or $name eq 'build.log';
+        if(-f "$destdir/$name" or -l "$destdir/$name") {
+            shell_exec("rm -f '$destdir/$name'");
+        } else {
+            shell_exec("rm -rf '$destdir/$name'");
+        }
+    }
+    close FD;
+}
+
+sub build_make_symlink {
+    $destdir = shift;
+    shell_exec("mkdir -p $destdir") unless -d $destdir;
+    shell_exec("mkdir -p $destdir/tmp") unless -d "$destdir/tmp";
+    shell_exec('ln -sf ../../feeds ./openwrt/package/');
+    shell_exec("ln -sf ../feeds $destdir/");
+    shell_exec("ln -sf ../openwrt/BSDmakefile $destdir/");
+    shell_exec("ln -sf ../openwrt/config $destdir/") if -e './openwrt/config';
+    shell_exec("ln -sf ../openwrt/Config.in $destdir/");
+    shell_exec("ln -sf ../openwrt/LICENSE $destdir/");
+    shell_exec("ln -sf ../openwrt/Makefile $destdir/");
+    shell_exec("ln -sf ../openwrt/README $destdir/");
+    shell_exec("ln -sf ../openwrt/feeds.conf.default $destdir/");
+    shell_exec("ln -sf ../openwrt/include $destdir/");
+    shell_exec("ln -sf ../openwrt/package $destdir/");
+    shell_exec("ln -sf ../openwrt/rules.mk $destdir/");
+    shell_exec("ln -sf ../openwrt/scripts $destdir/");
+    shell_exec("ln -sf ../openwrt/target $destdir/");
+    shell_exec("ln -sf ../openwrt/toolchain $destdir/");
+    shell_exec("ln -sf ../openwrt/tools $destdir/");
+    shell_exec("ln -sf ../openwrt/docs $destdir/") if -e './openwrt/docs';
+    shell_exec("ln -sf ../openwrt/feeds.conf $destdir/") if -e './openwrt/feeds.conf';
+}
+

@@ -1,0 +1,8 @@
+*.o
+*.orig
+*.rej
+.*.swp
+.*.log
+.tags
+tags
+/git-core/
