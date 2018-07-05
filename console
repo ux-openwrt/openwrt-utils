@@ -459,7 +459,7 @@ sub cmd_build_help {
     print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
     print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
     print STDERR "  -f, --foreground         build foreground instead of daemon.\n";
-    print STDERR "  -j, --job=[JOB]          start JOB jobs to build.\n";
+    print STDERR "  -j, --jobs=[JOBS]        start JOBS jobs to build.\n";
     print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to download ball.\n";
     print STDERR "      --clean              clean build tree before build.\n";
     print STDERR "      --domain=[DOMAIN]    user DOMAIN as build domain.\n";
@@ -468,14 +468,14 @@ sub cmd_build_help {
 
 sub cmd_build {
     my ($foreground,$clean) = (0) x 2;
-    my ($destdir,$config,$job,$mirror,$user,$domain) = ('') x 6;
+    my ($destdir,$config,$jobs,$mirror,$user,$domain) = ('') x 6;
     GetOptions(
         'help|h'      => \$help,
         'foreground|f'=> \$foreground,
         'destdir|d=s' => \$destdir,
         'mirror|m=s'  => \$mirror,
         'config|c=s'  => \$config,
-        'job|j=s'     => \$job,
+        'jobs|j=s'    => \$jobs,
         'user=s'      => \$user,
         'domain=s'    => \$domain,
         'clean'       => \$clean
@@ -486,8 +486,9 @@ sub cmd_build {
     $destdir = 'build' unless $destdir;
     $user = 'compile' unless $user;
     $domain = 'ntcmd.org' unless $domain;
-    $job = cpu_get_slots() * cpu_get_cores() * 2 unless $job;
-    my $opt = "@ARGV";
+    $jobs = cpu_get_slots() * cpu_get_cores() * 2 unless $jobs;
+    my @opt = @ARGV;
+    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
     
     if(not $config) {
         syslog('no config is specified!');
@@ -538,9 +539,9 @@ sub cmd_build {
     shell_exec("echo '$mirror' > $destdir/scripts/localmirrors") if $mirror;
 
     syslog('--------------------------------------------');
-    return unless shell_exec("yes '' | make  -C $destdir oldconfig >/dev/null");
+    return unless shell_exec("yes '' | make  -C $destdir oldconfig -j $jobs @def >/dev/null");
     my $t1 = time();
-    shell_exec("make  -C $destdir -j $job $opt");
+    shell_exec("make  -C $destdir -j $jobs @opt");
     my $t2 = time();
     syslog('--------------------------------------------');
     my $tx = $t2 - $t1;
@@ -644,6 +645,7 @@ sub cmd_defconfig {
     );
 
     return cmd_defconfig_help() if $help;
+    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
 
     $destdir = 'build' unless $destdir;
     if($destdir eq '.') {
@@ -662,7 +664,7 @@ sub cmd_defconfig {
     } else {
         shell_exec("rm -f $destdir/.config");
     }
-    shell_exec("make -C $destdir menuconfig");
+    shell_exec("make -C $destdir menuconfig @def");
     my $board = qx(sed -E -e '/^CONFIG_TARGET_BOARD/!d' -e 's/^[^"]*"|"\$//g' $destdir/.config);
     $board =~ s/\s//g;
     #shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
@@ -685,6 +687,7 @@ sub cmd_menuconfig {
     );
 
     return cmd_menuconfig_help() if $help;
+    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
 
     $destdir = "build" unless $destdir;
     if($destdir eq '.') {
@@ -703,8 +706,8 @@ sub cmd_menuconfig {
     } else {
         shell_exec("rm -f $destdir/.config");
     }
-    shell_exec("make -C $destdir menuconfig");
-    return unless shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    shell_exec("make -C $destdir menuconfig @def");
+    return unless shell_exec("yes '' | make -C $destdir oldconfig @def >/dev/null");
     shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
     shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime())) if $config and -f $config;
     shell_exec("mv $destdir/.config.new $config") if $config;
@@ -723,6 +726,7 @@ sub cmd_diffconfig {
     );
 
     return cmd_diffconfig_help() if $help;
+    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
 
     $destdir = 'build' unless $destdir;
     if(not $config) {
@@ -744,9 +748,9 @@ sub cmd_diffconfig {
         return 0;
     }
     build_make_symlink($destdir);
-    shell_exec("make -C $destdir defconfig") unless -f "openwrt/scripts/config/conf";
+    shell_exec("make -C $destdir defconfig @def") unless -f "openwrt/scripts/config/conf";
     shell_exec("cp -f $config $destdir/.config");
-    return unless shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
+    return unless shell_exec("yes '' | make -C $destdir oldconfig @def >/dev/null");
     shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
     shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime()));
     shell_exec("mv $destdir/.config.new $config");
