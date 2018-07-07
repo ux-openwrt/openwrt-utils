@@ -945,7 +945,6 @@ sub git_init {
     my ($path) = @_;
     my $cmd = "git init '$path'";
     syslog($cmd);
-    $cmd = "cd $destdir; $cmd";
     system($cmd);
     return $? >> 8;
 }
