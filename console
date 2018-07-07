@@ -85,6 +85,16 @@ sub set_daemon {
     return 0;
 }
 
+sub quote {
+    my @opt;
+    foreach my $o (@_) {
+        $o =~ s/^([a-z0-9_]+)=(.*)$/$1='$2'/ig;
+        $o =~ s/^(--[a-z0-9_-]+)=(.*)$/$1='$2'/ig;
+        push(@opt, $o);
+    }
+    return @opt;
+}
+
 sub syslog {
     my $msg = shift;
     my $time = strftime('%Y-%m-%d %H:%M:%S', localtime());
@@ -138,7 +148,7 @@ sub cmd_init {
     #chdir($destdir);
     git_config('merge.renameLimit', 65536);
     shell_exec('echo -e "*.o\n*.orig\n*.rej\n*.swp\n*.log\n.tags\ntags"' . " >'$destdir/.gitignore'");
-    shell_exec('echo -e "/build*/\n/downloads/\n/release/\nlocalmirrors"' . " >>'$destdir/.gitignore'");
+    shell_exec('echo -e "/build*/\n/downloads/\n/releases/\nlocalmirrors"' . " >>'$destdir/.gitignore'");
     shell_exec("echo OpenWrt >'$destdir/README.md'");
     shell_exec("echo ============== >>'$destdir/README.md'");
     shell_exec("echo >>'$destdir/README.md'");
@@ -487,7 +497,7 @@ sub cmd_build {
     $user = 'compile' unless $user;
     $domain = 'ntcmd.org' unless $domain;
     $jobs = cpu_get_slots() * cpu_get_cores() * 2 unless $jobs;
-    my @opt = @ARGV;
+    my @opt = quote(@ARGV);
     my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
     
     if(not $config) {
@@ -533,7 +543,7 @@ sub cmd_build {
     shell_exec("echo 'CONFIG_BUILD_LOG=y' >> $destdir/.config");
     shell_exec("echo 'CONFIG_KERNEL_BUILD_USER=\"$user\"' >> $destdir/.config");
     shell_exec("echo 'CONFIG_KERNEL_BUILD_DOMAIN=\"$domain\"' >> $destdir/.config",);
-    shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../release/\$(BOARD)\"' >> $destdir/.config");
+    shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../releases/\$(BOARD)\"' >> $destdir/.config");
     shell_exec("echo 'CONFIG_DOWNLOAD_FOLDER=\"\$(TOPDIR)/../downloads\"' >> $destdir/.config");
     #shell_exec("echo 'CONFIG_LOCALMIRROR=\"$mirror\"' >> $destdir/.config");
     shell_exec("echo '$mirror' > $destdir/scripts/localmirrors") if $mirror;
@@ -645,7 +655,7 @@ sub cmd_defconfig {
     );
 
     return cmd_defconfig_help() if $help;
-    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
+    my @def = quote(grep(/^[a-z0-9_]+=/i, @ARGV));
 
     $destdir = 'build' unless $destdir;
     if($destdir eq '.') {
@@ -687,7 +697,7 @@ sub cmd_menuconfig {
     );
 
     return cmd_menuconfig_help() if $help;
-    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
+    my @def = quote(grep(/^[a-z0-9_]+=/i, @ARGV));
 
     $destdir = "build" unless $destdir;
     if($destdir eq '.') {
@@ -726,7 +736,7 @@ sub cmd_diffconfig {
     );
 
     return cmd_diffconfig_help() if $help;
-    my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
+    my @def = quote(grep(/^[a-z0-9_]+=/i, @ARGV));
 
     $destdir = 'build' unless $destdir;
     if(not $config) {
@@ -1170,5 +1180,6 @@ sub build_make_symlink {
     shell_exec("ln -sf ../openwrt/tools $destdir/");
     shell_exec("ln -sf ../openwrt/docs $destdir/") if -e './openwrt/docs';
     shell_exec("ln -sf ../openwrt/feeds.conf $destdir/") if -e './openwrt/feeds.conf';
+    #shell_exec("sed -i 's#SCAN_DEPTH=5#SCAN_DEPTH=6#' $destdir/include/toplevel.mk");
 }
 
