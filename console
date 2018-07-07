@@ -147,8 +147,6 @@ sub cmd_init {
     git_init($destdir);
     #chdir($destdir);
     git_config('merge.renameLimit', 65536);
-    shell_exec('echo -e "*.o\n*.orig\n*.rej\n*.swp\n*.log\n.tags\ntags"' . " >'$destdir/.gitignore'");
-    shell_exec('echo -e "/build*/\n/downloads/\n/releases/\nlocalmirrors"' . " >>'$destdir/.gitignore'");
     shell_exec("echo OpenWrt >'$destdir/README.md'");
     shell_exec("echo ============== >>'$destdir/README.md'");
     shell_exec("echo >>'$destdir/README.md'");
@@ -161,8 +159,12 @@ sub cmd_init {
     shell_exec("echo This repository is under the GPLv2 license: >>'$destdir/README.md'");
     shell_exec("echo >>'$destdir/README.md'");
     shell_exec("echo '    LICENSE' >>'$destdir/README.md'");
+    shell_exec('echo -e "*.o\n*.orig\n*.rej\n*.swp\n*.log\n.tags\ntags"' . " >'$destdir/.gitignore'");
+    shell_exec('echo -e "/build*/\n/downloads/\n/releases/\nlocalmirrors"' . " >>'$destdir/.gitignore'");
     shell_exec("mkdir '$destdir/defconfig'");
-    shell_exec("echo >'$destdir/defconfig/README.md'");
+    shell_exec("echo >'$destdir/defconfig/.gitignore'");
+    shell_exec("mkdir '$destdir/feeds'");
+    shell_exec("echo >'$destdir/feeds/.gitignore'");
     git_add('.');
     git_commit(0, 'Initialize repository');
 
