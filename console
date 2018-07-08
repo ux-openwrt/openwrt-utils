@@ -561,7 +561,10 @@ sub cmd_build {
 }
 
 sub cmd_checklog_help {
-
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -l, --log                view log of built fail package.\n";
+    print STDERR "  -e, --edit               edit Makefile of built fail package.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
 }
 
 sub cmd_checklog {
@@ -613,7 +616,9 @@ sub cmd_checklog {
 }
 
 sub cmd_checklog2_help {
-
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -l, --log                view log of built fail package.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
 }
 
 sub cmd_checklog2 {
@@ -645,7 +650,9 @@ sub cmd_checklog2 {
 }
 
 sub cmd_defconfig_help {
-
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
 }
 
 sub cmd_defconfig {
@@ -687,7 +694,9 @@ sub cmd_defconfig {
 }
 
 sub cmd_menuconfig_help {
-
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
 }
 
 sub cmd_menuconfig {
@@ -726,7 +735,9 @@ sub cmd_menuconfig {
 }
 
 sub cmd_diffconfig_help {
-
+    print STDERR "Usage: $0 build [OPTION]\n\n";
+    print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
+    print STDERR "  -d, --destdir=[DESTDIR]  set work path to DESTDIR.\n";
 }
 
 sub cmd_diffconfig {
