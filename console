@@ -184,7 +184,8 @@ sub cmd_init {
         goto _next unless $commit and $url;
         syslog('merge %s->%s', $prefix, $commit);
         git_remote_add($remote, $url);
-        last if git_fetch($remote);
+        last if git_fetch($remote, 0);
+        last if git_fetch($remote, 1);
         last if git_subtree_add($prefix, $commit);
         $ENV{"GIT_EDITOR"} = "sed -E -i \"s@(Merge commit '[a-f0-9]*').*@\\1 as '$prefix' for '$name'@\"";
         git_commit(1);
@@ -290,7 +291,8 @@ sub cmd_update {
             } else {
                 git_remote_add($remote, $url);
             }
-            goto _fail if git_fetch($remote);
+            goto _fail if git_fetch($remote, 0);
+            goto _fail if git_fetch($remote, 1);
             $ENV{"GIT_EDITOR"} = "sed -E -i \"s@(Merge commit '[a-f0-9]*').*@\\1 as '$prefix' for '$name'@\"";
 
             if(git_subtree_latest($prefix, '')) {
@@ -381,7 +383,8 @@ sub cmd_snapshot {
         } else {
             git_remote_add($remote, $url);
         }
-        next if git_fetch($remote);
+        next if git_fetch($remote, 0);
+        next if git_fetch($remote, 1);
         next unless git_branch_exists("$remote/$branch2"); 
         my $commit = git_log("$remote/$branch2", '%H', $until);
         my $cdate = git_log($commit, '%cd', '', 'raw');
@@ -840,6 +843,11 @@ sub git_remote_get_url {
     return $url;
 }
 
+sub git_version {
+    my $cmd = "git --version";
+    return qx($cmd);
+}
+
 sub git_remote_set_url {
     my ($remote, $url) = @_;
     my $cmd = "git remote set-url '$remote' '$url'";
@@ -896,7 +904,11 @@ sub git_log {
 sub git_commit {
     my ($amend, $comments) = @_;
     my $cmd = "git commit --allow-empty";
-    $cmd .= " --amend --date=0" if $amend;
+    if(git_version() =~ m/^git version 2/) {
+        $cmd .= " --amend --date=0" if $amend;
+    } else {
+        $cmd .= " --amend --date=''" if $amend;
+    }
     $cmd .= " --message='$comments'" if $comments;
     syslog($cmd);
     $cmd = "cd $destdir; $cmd";
@@ -979,8 +991,10 @@ sub git_add {
 }
 
 sub git_fetch {
-    my ($remote) = @_;
-    my $cmd = "git fetch --tags '$remote'";
+    my ($remote, $tags) = @_;
+    my $cmd = "git fetch";
+    $cmd .= " --tags" if $tags;
+    $cmd .= " '$remote'";
     syslog($cmd);
     $cmd = "cd $destdir; $cmd";
     system($cmd);
