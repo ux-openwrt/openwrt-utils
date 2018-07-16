@@ -233,6 +233,15 @@ commit:
         routing:   d11075cd40a88602bf4ba2b275f72100ddcb4767
         telephony: ac6415e61f147a6892fd2785337aec93ddc68fa9            
 
+    - name: 17.01.5
+      type: tag
+      dict:
+        openwrt:   248b35890339d70d7b43e3b40fba0281f854ed9a
+        packages:  2578f56c298ef8691cc9448dc9f583fc8159260e
+        luci:      b78664c2cd4046a1e77285834b71f9523c91afe7
+        routing:   d09478290f72c6e58833b65baf14d9173eaf98e1
+        telephony: b60d32979aa1913bf37ae7c09e4773735f9f255f
+
     - name: 18.06
       type: branch
       dict:
@@ -250,3 +259,12 @@ commit:
         luci:      c379f00e86a5fc5d05a8e967c5c5daa035a72359
         routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
         telephony: 1195dafe98bca2d3a41383eb2723d0104d7f9046
+
+    - name: 18.06.0-rc2
+      type: tag
+      dict:
+        openwrt:   4de335bdbed6b6ef5b191ba31b71f007dc419172
+        packages:  05b9aceb00725b69220defaaad11f24b63731ac3
+        luci:      911219898f5e65e8bb867a8195812550cff583d5
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: 278ca6938638aa2d5569b29166d157e0458f656e
