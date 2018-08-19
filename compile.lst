@@ -15,6 +15,7 @@ ncurses-devel
 zlib-devel
 zlib-static
 
+time
 file
 tar
 gzip
