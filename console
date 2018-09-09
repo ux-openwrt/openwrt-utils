@@ -500,7 +500,7 @@ sub cmd_build {
 
     $destdir = 'build' unless $destdir;
     $user = 'compile' unless $user;
-    $domain = 'ntcmd.org' unless $domain;
+    $domain = 'uxgood.org' unless $domain;
     $jobs = cpu_get_slots() * cpu_get_cores() * 2 unless $jobs;
     my @opt = quote(@ARGV);
     my @def = grep(/^[a-z0-9_]+=/i, @ARGV);
