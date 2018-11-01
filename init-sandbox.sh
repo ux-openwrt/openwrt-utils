@@ -20,6 +20,10 @@ bootstrap_centos()
     local rootdir=$3
     local mirror=$4
 
+    [ -n "$release" ] || exit
+    [ -n "$basearch" ] || exit
+    [ -n "$rootdir" ] || exit
+
     mkdir -p $rootdir
     rootdir=`cd $rootdir;pwd`
     make_yum_repo $release $basearch $rootdir
