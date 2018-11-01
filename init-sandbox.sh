@@ -23,7 +23,7 @@ bootstrap_centos()
     mkdir -p $rootdir
     rootdir=`cd $rootdir;pwd`
     make_yum_repo $release $basearch $rootdir
-    call_yum $rootdir install bash
+    call_yum $rootdir install bash centos-release
     make_device_nodes $rootdir
     clean_yum_cache $rootdir
 }

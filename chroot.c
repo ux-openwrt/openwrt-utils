@@ -163,13 +163,13 @@ int main(int argc, char *argv[])
         params[i] = NULL;
     }
     char *env[] = {
-        "shell=bash",
         "TERM=xterm",
         "HOME=/home/compile",
         "USER=compile",
         "LOGNAME=compile",
         "SHELL=/bin/bash",
         "LANG=en_US.UTF-8",
+        "shell=bash",
         NULL};
     if(uid == 0) {
         env[1] = "HOME=/root";

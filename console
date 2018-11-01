@@ -524,9 +524,9 @@ sub cmd_build {
         return 0;
     }
 
-    shell_exec("mkdir -p $destdir") unless -d $destdir;
+    shell_exec("mkdir -p '$destdir'") unless -d $destdir;
     if(my $pid = set_daemon(not $foreground)) {
-        shell_exec("tail --pid=$pid -f $destdir/build.log");
+        shell_exec("tail --pid=$pid -f '$destdir/build.log'");
         return 0;
     } else {
         open STDOUT, ">$destdir/build.log";
@@ -535,28 +535,28 @@ sub cmd_build {
     shell_exec('rm -f openwrt/scripts/localmirrors');
     build_clean_destdir($destdir) if $clean;
     build_make_symlink($destdir);
-    shell_exec("cp -f $config $destdir/.config");
+    shell_exec("cp -f '$config' '$destdir/.config'");
 
-    shell_exec("sed -i '/CONFIG_DEVEL[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/CONFIG_BUILD_LOG[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_USER[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_DOMAIN[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/CONFIG_BINARY_FOLDER[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/CONFIG_DOWNLOAD_FOLDER[ =]/d' $destdir/.config");
-    shell_exec("sed -i '/LOCALMIRROR[ =]/d' $destdir/.config");
-    shell_exec("echo 'CONFIG_DEVEL=y' >> $destdir/.config");
-    shell_exec("echo 'CONFIG_BUILD_LOG=y' >> $destdir/.config");
-    shell_exec("echo 'CONFIG_KERNEL_BUILD_USER=\"$user\"' >> $destdir/.config");
-    shell_exec("echo 'CONFIG_KERNEL_BUILD_DOMAIN=\"$domain\"' >> $destdir/.config",);
-    shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../releases/\$(BOARD)\"' >> $destdir/.config");
-    shell_exec("echo 'CONFIG_DOWNLOAD_FOLDER=\"\$(TOPDIR)/../downloads\"' >> $destdir/.config");
-    #shell_exec("echo 'CONFIG_LOCALMIRROR=\"$mirror\"' >> $destdir/.config");
-    shell_exec("echo '$mirror' > $destdir/scripts/localmirrors") if $mirror;
+    shell_exec("sed -i '/CONFIG_DEVEL[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/CONFIG_BUILD_LOG[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_USER[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/CONFIG_KERNEL_BUILD_DOMAIN[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/CONFIG_BINARY_FOLDER[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/CONFIG_DOWNLOAD_FOLDER[ =]/d' '$destdir/.config'");
+    shell_exec("sed -i '/LOCALMIRROR[ =]/d' '$destdir/.config'");
+    shell_exec("echo 'CONFIG_DEVEL=y' >> '$destdir/.config'");
+    shell_exec("echo 'CONFIG_BUILD_LOG=y' >> '$destdir/.config'");
+    shell_exec("echo 'CONFIG_KERNEL_BUILD_USER=\"$user\"' >> '$destdir/.config'");
+    shell_exec("echo 'CONFIG_KERNEL_BUILD_DOMAIN=\"$domain\"' >> '$destdir/.config'",);
+    shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../releases/\$(BOARD)\"' >> '$destdir/.config'");
+    shell_exec("echo 'CONFIG_DOWNLOAD_FOLDER=\"\$(TOPDIR)/../downloads\"' >> '$destdir/.config'");
+    #shell_exec("echo 'CONFIG_LOCALMIRROR=\"$mirror\"' >> '$destdir/.config'");
+    shell_exec("echo '$mirror' > '$destdir/scripts/localmirrors'") if $mirror;
 
     syslog('--------------------------------------------');
-    return unless shell_exec("yes '' | make  -C $destdir oldconfig -j $jobs @def >/dev/null");
+    return unless shell_exec("yes '' | make  -C '$destdir' oldconfig -j $jobs @def >/dev/null");
     my $t1 = time();
-    shell_exec("make  -C $destdir -j $jobs @opt");
+    shell_exec("make  -C '$destdir' -j $jobs @opt");
     my $t2 = time();
     syslog('--------------------------------------------');
     my $tx = $t2 - $t1;
@@ -652,6 +652,18 @@ sub cmd_checklog2 {
     }
 }
 
+sub copy_config
+{
+    my ($src, $dst) = @_;
+    return unless $src and $dst;
+    return unless -f $src;
+    
+    if(system("cmp -s '$src' '$dst'") >> 8 == 1) {
+        shell_exec("mv '$dst' '$dst-" . strftime("%Y%m%d%H%M%S",localtime()) . "'");
+    }
+    shell_exec("mv '$src' '$dst'") unless -f $dst;
+}
+
 sub cmd_defconfig_help {
     print STDERR "Usage: $0 build [OPTION]\n\n";
     print STDERR "  -c, --config=[CONFIG]    use CONFIG to build.\n";
@@ -682,18 +694,19 @@ sub cmd_defconfig {
 
     build_make_symlink($destdir);
     if(-f $config) {
-        shell_exec("cp -f $config $destdir/.config");
+        shell_exec("cp -f '$config' '$destdir/.config'");
     } else {
-        shell_exec("rm -f $destdir/.config");
+        shell_exec("rm -f '$destdir/.config'");
     }
-    shell_exec("make -C $destdir menuconfig @def");
-    my $board = qx(sed -E -e '/^CONFIG_TARGET_BOARD/!d' -e 's/^[^"]*"|"\$//g' $destdir/.config);
+    shell_exec("make -C '$destdir' menuconfig @def");
+    my $board = qx(sed -E -e '/^CONFIG_TARGET_BOARD/!d' -e 's/^[^"]*"|"\$//g' '$destdir/.config');
     $board =~ s/\s//g;
-    #shell_exec("yes '' | make -C $destdir oldconfig >/dev/null");
-    #shell_exec("cd $destdir; ./scripts/diffconfig.sh | grep CONFIG_TARGET_ > .config.new");
-    shell_exec("grep '^CONFIG_TARGET_${board}[_=]' $destdir/.config >$destdir/.config.new");
-    shell_exec("mv $config $config-" . strftime("%Y%m%d%H%M%S",localtime())) if $config and -f $config;
-    shell_exec("mv $destdir/.config.new $config") if $config;
+    #shell_exec("yes '' | make -C '$destdir' oldconfig >/dev/null");
+    #shell_exec("cd '$destdir'; ./scripts/diffconfig.sh | grep CONFIG_TARGET_ > .config.new");
+    shell_exec("grep '^CONFIG_TARGET_${board}[_=]' '$destdir/.config' >'$destdir/.config.new'");
+    #shell_exec("mv $config $config-" . strftime("%Y%m%d%H%M%S",localtime())) if $config and -f $config;
+    #shell_exec("mv $destdir/.config.new $config") if $config;
+    copy_config("$destdir/.config.new", $config);
 }
 
 sub cmd_menuconfig_help {
@@ -726,15 +739,16 @@ sub cmd_menuconfig {
 
     build_make_symlink($destdir);
     if(-f $config) {
-        shell_exec("cp -f $config $destdir/.config");
+        shell_exec("cp -f '$config' '$destdir/.config'");
     } else {
-        shell_exec("rm -f $destdir/.config");
+        shell_exec("rm -f '$destdir/.config'");
     }
-    shell_exec("make -C $destdir menuconfig @def");
-    return unless shell_exec("yes '' | make -C $destdir oldconfig @def >/dev/null");
-    shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
-    shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime())) if $config and -f $config;
-    shell_exec("mv $destdir/.config.new $config") if $config;
+    shell_exec("make -C '$destdir' menuconfig @def");
+    return unless shell_exec("yes '' | make -C '$destdir' oldconfig @def >/dev/null");
+    shell_exec("cd '$destdir'; ./scripts/diffconfig.sh > .config.new");
+    #shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime())) if $config and -f $config;
+    #shell_exec("mv $destdir/.config.new $config") if $config;
+    copy_config("$destdir/.config.new", $config);
 }
 
 sub cmd_diffconfig_help {
@@ -774,12 +788,13 @@ sub cmd_diffconfig {
         return 0;
     }
     build_make_symlink($destdir);
-    shell_exec("make -C $destdir defconfig @def") unless -f "openwrt/scripts/config/conf";
-    shell_exec("cp -f $config $destdir/.config");
-    return unless shell_exec("yes '' | make -C $destdir oldconfig @def >/dev/null");
-    shell_exec("cd $destdir; ./scripts/diffconfig.sh > .config.new");
-    shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime()));
-    shell_exec("mv $destdir/.config.new $config");
+    shell_exec("make -C '$destdir' defconfig @def") unless -f "openwrt/scripts/config/conf";
+    shell_exec("cp -f '$config' '$destdir/.config'");
+    return unless shell_exec("yes '' | make -C '$destdir' oldconfig @def >/dev/null");
+    shell_exec("cd '$destdir'; ./scripts/diffconfig.sh > .config.new");
+    #shell_exec("mv $config $config-" . strftime('%Y%m%d%H%M%S',localtime()));
+    #shell_exec("mv $destdir/.config.new $config");
+    copy_config("$destdir/.config.new", $config);
 }
 
 sub cpu_get_cores {
@@ -1186,26 +1201,26 @@ sub build_clean_destdir {
 
 sub build_make_symlink {
     $destdir = shift;
-    shell_exec("mkdir -p $destdir") unless -d $destdir;
-    shell_exec("mkdir -p $destdir/tmp") unless -d "$destdir/tmp";
+    shell_exec("mkdir -p '$destdir'") unless -d $destdir;
+    shell_exec("mkdir -p '$destdir/tmp'") unless -d "$destdir/tmp";
     shell_exec('ln -sf ../../feeds ./openwrt/package/');
-    shell_exec("ln -sf ../feeds $destdir/");
-    shell_exec("ln -sf ../openwrt/BSDmakefile $destdir/");
-    shell_exec("ln -sf ../openwrt/config $destdir/") if -e './openwrt/config';
-    shell_exec("ln -sf ../openwrt/Config.in $destdir/");
-    shell_exec("ln -sf ../openwrt/LICENSE $destdir/");
-    shell_exec("ln -sf ../openwrt/Makefile $destdir/");
-    shell_exec("ln -sf ../openwrt/README $destdir/");
-    shell_exec("ln -sf ../openwrt/feeds.conf.default $destdir/");
-    shell_exec("ln -sf ../openwrt/include $destdir/");
-    shell_exec("ln -sf ../openwrt/package $destdir/");
-    shell_exec("ln -sf ../openwrt/rules.mk $destdir/");
-    shell_exec("ln -sf ../openwrt/scripts $destdir/");
-    shell_exec("ln -sf ../openwrt/target $destdir/");
-    shell_exec("ln -sf ../openwrt/toolchain $destdir/");
-    shell_exec("ln -sf ../openwrt/tools $destdir/");
-    shell_exec("ln -sf ../openwrt/docs $destdir/") if -e './openwrt/docs';
-    shell_exec("ln -sf ../openwrt/feeds.conf $destdir/") if -e './openwrt/feeds.conf';
+    shell_exec("ln -sf ../feeds '$destdir/'");
+    shell_exec("ln -sf ../openwrt/BSDmakefile '$destdir/'");
+    shell_exec("ln -sf ../openwrt/config '$destdir/'") if -e './openwrt/config';
+    shell_exec("ln -sf ../openwrt/Config.in '$destdir/'");
+    shell_exec("ln -sf ../openwrt/LICENSE '$destdir/'");
+    shell_exec("ln -sf ../openwrt/Makefile '$destdir/'");
+    shell_exec("ln -sf ../openwrt/README '$destdir/'");
+    shell_exec("ln -sf ../openwrt/feeds.conf.default '$destdir/'");
+    shell_exec("ln -sf ../openwrt/include '$destdir/'");
+    shell_exec("ln -sf ../openwrt/package '$destdir/'");
+    shell_exec("ln -sf ../openwrt/rules.mk '$destdir/'");
+    shell_exec("ln -sf ../openwrt/scripts '$destdir/'");
+    shell_exec("ln -sf ../openwrt/target '$destdir/'");
+    shell_exec("ln -sf ../openwrt/toolchain '$destdir/'");
+    shell_exec("ln -sf ../openwrt/tools '$destdir/'");
+    shell_exec("ln -sf ../openwrt/docs '$destdir/'") if -e './openwrt/docs';
+    shell_exec("ln -sf ../openwrt/feeds.conf '$destdir/'") if -e './openwrt/feeds.conf';
     #shell_exec("sed -i 's#SCAN_DEPTH=5#SCAN_DEPTH=6#' $destdir/include/toplevel.mk");
 }
 

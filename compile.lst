@@ -46,7 +46,7 @@ openssl-devel
 mailx
 
 # apcupsd
-#sysvinit-tools
+sysvinit-tools
 
 # kbr5
 libcom_err-devel
@@ -59,13 +59,13 @@ libgcc.i686
 perl-XML-Parser
 
 # classpath
-#java-1.7.0-openjdk-devel
+java-1.7.0-openjdk-devel
 
 # loudmouth
-#gtk-doc
+gtk-doc
 
 # rxtx
-#java-1.7.0-openjdk
+java-1.7.0-openjdk
 
 # ...
 vim-enhanced
