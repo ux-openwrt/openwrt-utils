@@ -295,3 +295,12 @@ commit:
         luci:      f64b1523447547032d5280fb0bcdde570f2ca913
         routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
         telephony: b9d7b321d15a44c5abb9e5d43a4ec78abfd9031b
+
+    - name: 18.06.2
+      type: tag
+      dict:
+        openwrt:   a02809f61bf9fda0387d37bd05d0bcfe8397e25d
+        packages:  911bbd6bb4856f1e28ae00af37df62e4fa3529e5
+        luci:      6f6641d97de2c85ee5d87beda92ae8437d1dbdf5
+        routing:   ea345d16a6e27c2a8fdf67bf543cc36a5f189131
+        telephony: cb939d9677d6e38c428f9f297641d07611edeb04
