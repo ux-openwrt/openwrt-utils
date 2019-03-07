@@ -1,0 +1,120 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use POSIX 'setsid';
+use POSIX 'strftime';
+use Cwd 'abs_path';
+use File::Basename;
+use YAML;
+use Getopt::Long;
+
+my $destdir = '';
+my $help = 0;
+
+main();
+
+sub main
+{
+    no strict 'refs';
+    $ENV{'LANG'} = 'en_US.UTF-8';
+    $ENV{'PATH'} = dirname(abs_path($0)) . ':' . $ENV{'PATH'};
+    Getopt::Long::Configure('bundling', 'no_ignore_case', 'pass_through', 'bundling_override');
+    my $cmd = shift @ARGV;
+    my $func = "cmd_$cmd" if $cmd;
+    if ($cmd and __PACKAGE__->can($func)) {
+        &$func(@ARGV);
+    } else {
+        cmd_help($cmd);
+        return -1;
+    }
+}
+
+sub cmd_help
+{
+    no strict 'refs';
+    my $cmd = shift;
+    my $func = "cmd_$cmd" if $cmd;
+
+    if ($cmd and __PACKAGE__->can($func)) {
+        $func = "${func}_help";
+        &$func() if __PACKAGE__->can($func);
+        return;
+    } elsif($cmd and $cmd ne '--help') {
+        print STDERR "unknown command $cmd!\n";
+    }
+    print STDERR "usage: $0 <command> [<args>]\n";
+    print STDERR "\n";
+    print STDERR "The available commands are:\n";
+}
+
+sub set_daemon
+{
+    return fork() unless shift;
+    pipe(P_READ, P_WRITE);
+    if(my $pid = fork()) {
+        waitpid($pid, 0);
+        while(not $pid = <P_READ>){};
+        close P_READ;
+        return int($pid);
+    }
+    close P_READ;
+    exit if fork();
+    setsid();
+    umask 002;
+    #chdir '/';
+    exit if fork();
+
+    print P_WRITE "$$\n";
+    close P_WRITE;
+
+    close STDIN;
+    close STDOUT;
+    close STDERR;
+    open STDIN, '</dev/null';
+    open STDOUT, '>/dev/null';
+    open STDERR, '>/dev/null';
+    return 0;
+}
+
+sub quote
+{
+    my @opt;
+    foreach my $o (@_) {
+        $o =~ s/^([a-z0-9_]+)=(.*)$/$1='$2'/ig;
+        $o =~ s/^(--[a-z0-9_-]+)=(.*)$/$1='$2'/ig;
+        push(@opt, $o);
+    }
+    return @opt;
+}
+
+sub syslog 
+{
+    my $msg = shift;
+    my $time = strftime('%Y-%m-%d %H:%M:%S', localtime());
+    printf STDERR ("[$time] $msg\n", @_) if $msg;
+    printf STDERR ("\n", @_) unless $msg;
+}
+
+sub shell_exec
+{
+    my ($cmd) = @_;
+    syslog('> %s', $cmd);
+    system($cmd);
+    return ($? >> 8) == 0;
+}
+
+sub get_cores {
+    my $cnt = 0;
+    open(FH, '/proc/cpuinfo');
+    while(<FH>) {
+        if(/^cpu cores\s*:\s(\d*)$/) {
+            $cnt += $1;
+            last;
+        }
+    }
+    close(FH);
+    return $cnt;
+}
+
+

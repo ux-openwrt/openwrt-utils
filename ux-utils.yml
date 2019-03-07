@@ -1,0 +1,50 @@
+openwrt:
+    github: ~
+    openwrt: ~
+
+openwrt2:
+    github: ~
+    openwrt: ~
+
+feeds:
+    packages:
+        github: ~
+        openwrt: ~
+    luci:
+        github: ~
+        openwrt: ~
+    routing:
+        github: ~
+        openwrt: ~
+    telephony:
+        github: ~
+        openwrt: ~
+    ux-packages:
+        github: ~
+        openwrt: ~
+
+branches:
+    12.09:
+    14.07:
+    15.05:
+    17.01:
+    18.02:
+
+tags:
+    12.09.0:
+    14.07.0:
+    15.05.0:
+    17.01.0-rc1:
+    17.01.0-rc2:
+    17.01.0:
+    17.01.1:
+    17.01.2:
+    17.01.3:
+    17.01.4:
+    17.01.5:
+    17.01.6:
+    18.06.0-rc1:
+    18.06.0-rc2:
+    18.06.0:
+    18.06.1:
+    18.06.2:
