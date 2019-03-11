@@ -21,23 +21,24 @@ sub main
     $ENV{'PATH'} = dirname(abs_path($0)) . ':' . $ENV{'PATH'};
     Getopt::Long::Configure('bundling', 'no_ignore_case', 'pass_through', 'bundling_override');
     my $cmd = shift @ARGV;
-    my $func = "cmd_$cmd" if $cmd;
+    my $func = "cmd_${cmd}_func" if $cmd;
     if ($cmd and __PACKAGE__->can($func)) {
         &$func(@ARGV);
     } else {
-        cmd_help($cmd);
+        cmd_help_func($cmd);
         return -1;
     }
 }
 
-sub cmd_help
+sub cmd_help_func
 {
     no strict 'refs';
     my $cmd = shift;
-    my $func = "cmd_$cmd" if $cmd;
+    my $func = "cmd_${cmd}_func" if $cmd;
 
     if ($cmd and __PACKAGE__->can($func)) {
-        $func = "${func}_help";
+        $help = 1;
+        $func = "cmd_${cmd}_help";
         &$func() if __PACKAGE__->can($func);
         return;
     } elsif($cmd and $cmd ne '--help') {
@@ -46,6 +47,7 @@ sub cmd_help
     print STDERR "usage: $0 <command> [<args>]\n";
     print STDERR "\n";
     print STDERR "The available commands are:\n";
+    cmd_init_help();
 }
 
 sub set_daemon
@@ -90,31 +92,179 @@ sub quote
 
 sub syslog 
 {
+    my $exit = shift;
     my $msg = shift;
     my $time = strftime('%Y-%m-%d %H:%M:%S', localtime());
     printf STDERR ("[$time] $msg\n", @_) if $msg;
-    printf STDERR ("\n", @_) unless $msg;
+    printf STDERR ("\n") unless $msg;
+    exit(abs($exit)) if $exit < 0;
 }
 
 sub shell_exec
 {
     my ($cmd) = @_;
-    syslog('> %s', $cmd);
+    syslog(0, '> %s', $cmd);
     system($cmd);
     return ($? >> 8) == 0;
 }
 
 sub get_cores {
     my $cnt = 0;
-    open(FH, '/proc/cpuinfo');
-    while(<FH>) {
+    open(F, '/proc/cpuinfo');
+    while(<F>) {
         if(/^cpu cores\s*:\s(\d*)$/) {
             $cnt += $1;
             last;
         }
     }
-    close(FH);
+    close(F);
     return $cnt;
 }
 
+sub get_subname
+{
+    my $name = (caller(1))[3];
+    $name =~ s/.*:://;
+    return $name;
+}
+
+sub call_subhelp
+{
+    no strict 'refs';
+    my $name = (caller(1))[3];
+    $name =~ s/.*::(.*)_func/$1_help/;
+    return $name();
+}
+
+sub cmd_init_help
+{
+    print STDERR "  init       Init git repository for build.\n" unless $help;
+    return unless $help;
+    print STDERR "usage: $0 init [<args>]\n\n";
+    print STDERR "  -d, --destdir=[DESTDIR] set work path to DESTDIR.\n";
+    print STDERR "  -m, --mirror=[MIRROR]   use MIRROR to fetch repo.\n";
+    print STDERR "  -b, --branch=[BRANCH]   checkout BRANCH for build.\n";
+    print STDERR "  -t, --tag=[TAG]         checkout TAG for build.\n";
+}
+
+sub cmd_init_func
+{
+    my $mirror = 'openwrt';
+    my $destdir = '';
+    my $branch = '';
+    my $tag = '';
+    GetOptions(
+        'help|h'=>\$help,
+        'destdir|d=s'=>\$destdir,
+        'mirror|m=s'=>\$mirror,
+        'branch|b=s'=>\$branch,
+        'tag|t=s'=>\$tag
+    );
+
+    call_subhelp() if $help;
+    print '-b,--branch and -t,-tag can not use together.' if $branch and $tag;
+    $branch = 'master' unless $branch or $tag;
+   
+    $destdir = 'openwrt-' . ($tag ? $tag : $branch) unless $destdir;
+    $branch = substr($tag, 0, 5) if $tag;
+    my $cfg = load_config();
+
+    syslog(-1, "tag %s not exists.", $tag) if $tag and not $cfg->{'tags'}->{$tag};
+    syslog(-1, "branch %s not exists.", $branch) unless $tag or $cfg->{'branches'}->{$branch} or $branch eq 'master';
+
+    my $remote = get_remote($cfg, 'openwrt', $mirror) if $branch gt '15.05';
+    $remote = get_remote($cfg, 'openwrt2', $mirror) if $branch le '15.05';
+
+    my $feeds = get_feeds($cfg, $branch, $tag, $mirror);
+
+    my $id = $cfg->{'tags'}->{$tag}->{'openwrt'} if $tag;
+    my $bname = 'master';
+    $bname = $cfg->{'branches'}->{$branch}->{'openwrt'} unless $branch eq $bname;
+
+    init_buildroot($destdir, $remote, $feeds, $tag, $id) if $tag;
+    init_buildroot($destdir, $remote, $feeds, $bname) unless $tag;
+}
+
+sub init_buildroot
+{
+    my $destdir = shift;
+    my $remote = shift;
+    my $feeds = shift;
+    my $bname = shift;
+    my $id = shift;
+
+    #shell_exec("git clone '$remote' '$destdir'") unless -d "$destdir/.git";
+    mkdir($destdir) unless -d $destdir;
+    chdir($destdir);
+    shell_exec('git init .') unless -d '.git';
+    shell_exec("git remote add origin '$remote'") unless regex('.git/config', '\[remote .*\]');
+    shell_exec("git remote set-url origin '$remote'");
+    shell_exec("git fetch origin");
+    shell_exec("git checkout $id -b $bname") if $id;
+    shell_exec("git checkout $bname") unless $id;
+    shell_exec("git pull") unless $id;
+
+    open F, ">feeds.conf";
+    print F $feeds;
+    close(F);
+}
+
+sub regex
+{
+    my $name = shift;
+    my $text = shift;
+    open(F, "< $name");
+    while(<F>) {
+        return 1 if $_ =~ /$text/;
+    }
+    return 0;
+}
+
+sub get_feeds
+{
+    my $cfg = shift;
+    my $branch = shift;
+    my $tag = shift;
+    my $mirror = shift;
+    my $feeds = '';
+    foreach my $name (keys $cfg->{'feeds'}) {
+        my $remote = get_remote($cfg->{'feeds'}, $name, $mirror);
+        next unless $remote;
+        if($tag) {
+            my $id = $cfg->{'tags'}->{$tag}->{$name};
+            $feeds .= "src-git $name $remote^$id\n" if $id;
+            next if $id;
+        }
+        my $bname = $cfg->{'branches'}->{$branch}->{$name};
+        next unless $bname or $branch gt '12.09';
+        $name =~ s/-//; 
+        $feeds .= "src-git $name $remote;$bname\n" if $bname;
+        $feeds .= "src-git $name $remote\n" unless $bname;
+    }
+    return $feeds;
+}
+
+sub get_remote
+{
+    my $cfg = shift;
+    my $branch = shift;
+    my $mirror = shift;
+    my $remote = $cfg->{$branch}->{$mirror};
+    $remote = $cfg->{$branch}->{'openwrt'} unless $remote;
+    $remote = $cfg->{$branch}->{'github'} unless $remote;
+    return $remote;
+}
+
+sub load_config
+{
+    my $name = basename($0, '.pl') . '.yml';
+    my $path = dirname($0);
+    return if not -f "$path/$name";
+    open my $fd, "$path/$name";
+    $/ = 262144;
+    my $cfg = Load(<$fd>);
+    $/ = "\n";
+    close $fd;
+    return $cfg;
+}
 

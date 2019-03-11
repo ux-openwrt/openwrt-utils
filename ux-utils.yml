@@ -1,50 +1,166 @@
 openwrt:
-    github: ~
-    openwrt: ~
+    github: https://github.com/openwrt/openwrt.git
+    openwrt: https://git.openwrt.org/openwrt/openwrt.git
 
 openwrt2:
     github: ~
-    openwrt: ~
+    openwrt: https://git.openwrt.org/openwrt/svn-archive/archive.git
 
 feeds:
     packages:
-        github: ~
-        openwrt: ~
+        github: https://github.com/openwrt/packages.git
+        openwrt: https://git.openwrt.org/feed/packages.git
     luci:
-        github: ~
-        openwrt: ~
+        github: https://github.com/openwrt/luci.git
+        openwrt: https://git.openwrt.org/project/luci.git
     routing:
-        github: ~
-        openwrt: ~
+        github: https://github.com/openwrt-routing/packages.git
+        openwrt: https://git.openwrt.org/feed/routing.git
     telephony:
-        github: ~
-        openwrt: ~
+        github: https://github.com/openwrt/telephony.git
+        openwrt: https://git.openwrt.org/feed/telephony.git
     ux-packages:
-        github: ~
+        github: https://github.com/ux-openwrt/packages.git
         openwrt: ~
 
 branches:
     12.09:
+        openwrt: attitude_adjustment
+        packages: ~
+        luci: luci-0.11
+        routing: for-12.09.x
+        telephony: ~
     14.07:
+        openwrt: barrier_breaker
+        packages: for-14.07
+        luci: luci-0.12
+        routing: for-14.07
+        telephony: for-14.07
     15.05:
+        openwrt: chaos_calmer
+        packages: for-15.05
+        luci: for-15.05
+        routing: for-15.05
+        telephony: for-15.05
     17.01:
-    18.02:
+        openwrt: lede-17.01
+        packages: lede-17.01
+        luci: lede-17.01
+        routing: lede-17.01
+        telephony: lede-17.01
+    18.06:
+        openwrt: openwrt-18.06
+        packages: openwrt-18.06
+        luci: openwrt-18.06
+        routing: openwrt-18.06
+        telephony: openwrt-18.06
 
 tags:
     12.09.0:
+        openwrt:   506ec5f7f4b92fea9cee93ad576f8e760034b91b
+        packages:  ~
+        luci:      adc4c2932ec7039a6b7effeace098e5bc46861c6
+        routing:   1e99610f2680ec75c9422504fa2c09b8e41716c0
+        telephony: ~
     14.07.0:
+        openwrt:   ce4220c05045edf72c306398d14632e9ce8fe4bc
+        packages:  bdb8dd7dd7fd35d134d382a2f9b4e590a8b0967f
+        luci:      77eaad64ce6df9f456ae5f485e7d02f10c0968b7
+        routing:   47f74d0041962f2061a67ef949ab12378701fc4a
+        telephony: d1b156498c532ca15250a52b16d5ff320db20f61
     15.05.0:
+        openwrt:   64e92d3b75f58bdd4820f9c4147518bfe3556684
+        packages:  fd2374e5ff2ad66cd523f0d1274dfe9ade1e7127
+        luci:      3836b457b6126724452436d997de115d6772d950
+        routing:   f2a462fa65946f88c1acc0f1618a3633d406a748
+        telephony: d4ca5e50e63524356f6be8ff97d18086bc3d4578
+    15.05.1:
+        openwrt:   06bf2a082b73f21894fd89eb0a9c5ca650483533
+        packages:  185f5ba9e53375be24bce67ac055cc36355ae603
+        luci:      3201903e37370028c99777577703d51775866ca6
+        routing:   57009dafe0a73e55362017276144c3bb3a9955f4
+        telephony: 757d8d1f7f161d9f89a22a1707326cb984a2a2dd
     17.01.0-rc1:
+        openwrt:   68a04dbb4271e98c4622e6471c0d600cb57fe75f
+        packages:  31d89be9e69bac261bfe7440512cb4e0f3356255
+        luci:      472dc4b9e2ca71c114f5da70cb612c1089b8daa7
+        routing:   a6c7413594a0e4b42dab42bb5fa68534e39b7d0c
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
     17.01.0-rc2:
+        openwrt:   28b7d7f1dac725157c19236b8899e1c97f19cee9
+        packages:  06198d9c8c1ba061a0a5d566545a5c0bbce2b0a4
+        luci:      e306ee6c93c1ef600012f47e40dd75020d4ab555
+        routing:   dd36dd47bbd75defcb3c517cafe7a19ee425f0af
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
     17.01.0:
+        openwrt:   ac733df99c78f54b4cf9a8710f70a506f73e66fc
+        packages:  ed90827282851ad93294e370860320f1af428bb2
+        luci:      a100738163585ae1edc24d832ca9bef1f34beef0
+        routing:   dd36dd47bbd75defcb3c517cafe7a19ee425f0af
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
     17.01.1:
+        openwrt:   48461b5abc382b26edd0d2637f0f7b952bed90ba
+        packages:  f9e99848182fc7bc554e541ca133c22079d4041b
+        luci:      29fabe26399fbaecf9231e24f9ac1ee5773cafa6
+        routing:   04a37ef4309c2b67c64901eb8fbf3800b4c7bb35
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
     17.01.2:
+        openwrt:   2da512ecf4631cd7812283f0931cf6bbf842a313
+        packages:  dc558eaa296686603c1730c1aab01f3ea69d7831
+        luci:      7f6fc1681f7becc514a58082e871f3855d3a123f
+        routing:   dbbad8472288498c17825303d834da3ee5030806
+        telephony: 1f0fb2538ba6fc306198fe2a9a4b976d63adb304
     17.01.3:
+        openwrt:   df54a8f583a9afad356fb99a575d75b69c8c0dd4
+        packages:  21b2e3eb761ea79bf3a8d2b6368435887960f5c2
+        luci:      079f65a628a4c4179578c043d2905efea93bb167
+        routing:   d11075cd40a88602bf4ba2b275f72100ddcb4767
+        telephony: ac6415e61f147a6892fd2785337aec93ddc68fa9
     17.01.4:
+        openwrt:   444add156f2a6d92fc15005c5ade2208a978966c
+        packages:  cd5c448758f30868770b9ebf8b656c1a4211a240
+        luci:      d3f0685d63c1291359dc5dd089c82fa1e150e0c6
+        routing:   d11075cd40a88602bf4ba2b275f72100ddcb4767
+        telephony: ac6415e61f147a6892fd2785337aec93ddc68fa9            
     17.01.5:
+        openwrt:   248b35890339d70d7b43e3b40fba0281f854ed9a
+        packages:  2578f56c298ef8691cc9448dc9f583fc8159260e
+        luci:      b78664c2cd4046a1e77285834b71f9523c91afe7
+        routing:   d09478290f72c6e58833b65baf14d9173eaf98e1
+        telephony: b60d32979aa1913bf37ae7c09e4773735f9f255f
     17.01.6:
+        openwrt:   9a96ec08a953a409b76b1d5f90de183c51937547
+        packages:  40da7ecf21ffe1f3523ffa430c406e1db58ce3d4
+        luci:      7bf036750081787e01339c82865ad45fca6520ef
+        routing:   d09478290f72c6e58833b65baf14d9173eaf98e1
+        telephony: 95498e75db5c6741cd53f8746ffc1473c72b6e5d
     18.06.0-rc1:
+        openwrt:   13f64a1e597e00e7bc9cf73866533f668482c4fa
+        packages:  d83dc7cfb81680eff063acb7343eb9d6b0c9a6ab 
+        luci:      c379f00e86a5fc5d05a8e967c5c5daa035a72359
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: 1195dafe98bca2d3a41383eb2723d0104d7f9046
     18.06.0-rc2:
+        openwrt:   4de335bdbed6b6ef5b191ba31b71f007dc419172
+        packages:  05b9aceb00725b69220defaaad11f24b63731ac3
+        luci:      911219898f5e65e8bb867a8195812550cff583d5
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: 278ca6938638aa2d5569b29166d157e0458f656e
     18.06.0:
+        openwrt:   03b693064b6ad85ce9c57ab0226b986b09c8eb05
+        packages:  8bf5fc17db6072549a4e3bd8230d7962364f2043
+        luci:      6df9a57ef0773c7158dadbb5054a58cb3d70c621
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: 88b12368f11f3feeefcd4dcbe54f21159b8356c1
     18.06.1:
+        openwrt:   70255e3d624cd393612069aae0a859d1acbbeeae
+        packages:  35e0b737ab496f5b51e80079b0d8c9b442e223f5
+        luci:      f64b1523447547032d5280fb0bcdde570f2ca913
+        routing:   1b9d1c419f0ecefda51922a7845ab2183d6acd76
+        telephony: b9d7b321d15a44c5abb9e5d43a4ec78abfd9031b
     18.06.2:
+        openwrt:   a02809f61bf9fda0387d37bd05d0bcfe8397e25d
+        packages:  911bbd6bb4856f1e28ae00af37df62e4fa3529e5
+        luci:      6f6641d97de2c85ee5d87beda92ae8437d1dbdf5
+        routing:   ea345d16a6e27c2a8fdf67bf543cc36a5f189131
+        telephony: cb939d9677d6e38c428f9f297641d07611edeb04
