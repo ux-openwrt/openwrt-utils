@@ -93,7 +93,7 @@ make_device_nodes()
     mknod -m666 ${rootdir}/dev/urandom c 1 9 
     mknod -m666 ${rootdir}/dev/tty     c 5 0 
     mknod -m600 ${rootdir}/dev/console c 5 1 
-	mknod -m666 ${rootdir}/dev/ptmx    c 5 2
+    mknod -m666 ${rootdir}/dev/ptmx    c 5 2
 
     mknod -m660 ${rootdir}/dev/loop0   b 7 0 
     mknod -m660 ${rootdir}/dev/loop1   b 7 1 

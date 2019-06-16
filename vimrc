@@ -1,9 +1,8 @@
 set nocompatible              " be iMproved, required
 filetype off                  " required
 
-let s:rtpath='/opt/vim-bundle/bundles'
+let s:rtpath='~/.vim/bundles'
 " set the runtime path to include Vundle and initialize
-"set rtp+=/opt/vim-bundle/bundles/Vundle.vim
 let &rtp.=',' . s:rtpath . '/Vundle.vim'
 
 if !empty(glob(s:rtpath . '/Vundle.vim'))

@@ -476,17 +476,23 @@ sub cmd_build_help {
     print STDERR "  -f, --foreground         build foreground instead of daemon.\n";
     print STDERR "  -j, --jobs=[JOBS]        start JOBS jobs to build.\n";
     print STDERR "  -m, --mirror=[MIRROR]    use MIRROR to download ball.\n";
+    print STDERR "  -r, --release            build for release (enable all modules).\n";
+    print STDERR "  -n, --nls                enable nls support.\n";
+    print STDERR "  -p, --patented           enable patented packages.\n";
     print STDERR "      --clean              clean build tree before build.\n";
     print STDERR "      --domain=[DOMAIN]    user DOMAIN as build domain.\n";
     print STDERR "      --user=[USER]        user USER as build user.\n";
 }
 
 sub cmd_build {
-    my ($foreground,$clean) = (0) x 2;
+    my ($foreground,$clean,$release,$nls,$patented) = (0) x 5;
     my ($destdir,$config,$jobs,$mirror,$user,$domain) = ('') x 6;
     GetOptions(
         'help|h'      => \$help,
         'foreground|f'=> \$foreground,
+        'release|r'   => \$release,
+        'nls|n'       => \$nls,
+        'patented|p'  => \$patented,
         'destdir|d=s' => \$destdir,
         'mirror|m=s'  => \$mirror,
         'config|c=s'  => \$config,
@@ -546,6 +552,27 @@ sub cmd_build {
     shell_exec("sed -i '/LOCALMIRROR[ =]/d' '$destdir/.config'");
     shell_exec("echo 'CONFIG_DEVEL=y' >> '$destdir/.config'");
     shell_exec("echo 'CONFIG_BUILD_LOG=y' >> '$destdir/.config'");
+
+    if($release) {
+        shell_exec("sed -i '/CONFIG_ALL[ =]/d' '$destdir/.config'");
+        shell_exec("sed -i '/CONFIG_ALL_KMODS[ =]/d' '$destdir/.config'");
+        shell_exec("sed -i '/CONFIG_ALL_NONSHARED[ =]/d' '$destdir/.config'");
+        shell_exec("sed -i '/CONFIG_BUILD_PATENTED[ =]/d' '$destdir/.config'");
+        shell_exec("echo 'CONFIG_ALL=y' >> '$destdir/.config'");
+        shell_exec("echo 'CONFIG_ALL_KMODS=y' >> '$destdir/.config'");
+        shell_exec("echo 'CONFIG_ALL_NONSHARED=y' >> '$destdir/.config'");
+    }
+
+    if($patented) {
+        shell_exec("sed -i '/CONFIG_BUILD_PATENTED[ =]/d' '$destdir/.config'");
+        shell_exec("echo 'CONFIG_BUILD_PATENTED=y' >> '$destdir/.config'");
+    }
+
+    if($nls) {
+        shell_exec("sed -i '/CONFIG_BUILD_NLS[ =]/d' '$destdir/.config'");
+        shell_exec("echo 'CONFIG_BUILD_NLS=y' >> '$destdir/.config'");
+    }
+
     shell_exec("echo 'CONFIG_KERNEL_BUILD_USER=\"$user\"' >> '$destdir/.config'");
     shell_exec("echo 'CONFIG_KERNEL_BUILD_DOMAIN=\"$domain\"' >> '$destdir/.config'",);
     shell_exec("echo 'CONFIG_BINARY_FOLDER=\"\$(TOPDIR)/../releases/\$(BOARD)\"' >> '$destdir/.config'");
