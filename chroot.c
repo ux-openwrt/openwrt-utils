@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 {
     int opt = 0;
     int pid = 0;
-    int uid = 500;
+    int uid = getuid();
     int gid = 0;
     int status = 0;
     int i = 0;

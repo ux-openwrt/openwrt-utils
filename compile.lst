@@ -66,8 +66,11 @@ gtk-doc
 
 # rxtx
 java-1.7.0-openjdk
+# iso
+genisoimage
 
 # ...
+lrzsz
 vim-enhanced
 ctags
 cscope
