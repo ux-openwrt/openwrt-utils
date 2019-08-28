@@ -121,9 +121,9 @@ else
     endif
 endif
 "settings for bash_support
-let g:BASH_GlobalTemplateFile = ''
-let g:BASH_LocalTemplateFile  = ''
-let g:BASH_CustomTemplateFile = ''
+"let g:BASH_GlobalTemplateFile = ''
+"let g:BASH_LocalTemplateFile  = ''
+"let g:BASH_CustomTemplateFile = ''
 "settings for taglist
 nnoremap <silent> <F6> :TlistToggle<CR>
 let Tlist_Show_One_File = 1

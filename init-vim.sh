@@ -3,7 +3,8 @@ bindir=`dirname $0`
 rootdir=$1
 destdir=${2:-~/.vim}
 umask 002
-[ -f ${rootdir}/etc/centos-release ] || exit 1
+#[ -f ${rootdir}/etc/centos-release ] || exit 1
+[ -f ${rootdir}/etc/os-release ] || exit 1
 [ -d $destdir/bundles/Vundle.vim ] && exit 1 
 echo "destdir=$destdir"
 echo "source $destdir/vimrc" >~/.vimrc
