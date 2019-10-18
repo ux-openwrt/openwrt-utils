@@ -121,6 +121,7 @@ else
     endif
 endif
 "settings for bash_support
+let g:BASH_InsertFileHeader = 'no'
 "let g:BASH_GlobalTemplateFile = ''
 "let g:BASH_LocalTemplateFile  = ''
 "let g:BASH_CustomTemplateFile = ''
