@@ -16,7 +16,7 @@ mkdir -p $destdir2/bundles
 mkdir -p $destdir2/templates
 cp -f ${bindir}/vimrc $destdir2/
 cp -f ${bindir}/personal.templates $destdir2/templates/personal.templates
-sed -ir "s@(let s:rtpath=).*@\1'$destdir/bundles'@" $destdir2/vimrc
+sed -ir "s@\(let s:rtpath=\).*@\1'$destdir/bundles'@" $destdir2/vimrc
 
 [ -d $destdir2/bundles/Vundle.vim ] && ( cd $destdir2/bundles/Vundle.vim; git pull )
 [ -d $destdir2/bundles/Vundle.vim ] || git clone https://github.com/VundleVim/Vundle.vim $destdir2/bundles/Vundle.vim
