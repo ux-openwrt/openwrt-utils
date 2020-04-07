@@ -127,8 +127,7 @@ cmd_menuconfig()
         [ -e "$destdir/.config" ] && do_echo sh -c "cd '$destdir'; mv -f .config .config.bak"
         do_echo cp -f "$cfgfile" "$destdir/.config"
     fi
-
-    [ -n "$cfgfile" ] || [ -n "$new" ] && do_echo rm -f $destdir/.config
+    [ -n "$cfgfile" ] || { [ -n "$new" ] && do_echo rm -f $destdir/.config; }
 
     do_echo make $opt menuconfig "$@"
     do_echo make $opt oldconfig "$@" 0</dev/null
@@ -174,9 +173,23 @@ cmd_oldconfig()
     fi
 }
 
+cmd_tail()
+{
+    local opt
+    local logfile=$1
+    [ -n "$logfile" ] || { echo 'no logfile!'; exit 1; }
+    [ -f "$logfile" ] || { echo "$logfile is not a file!"; exit 2; }
+    local pid="$(fuser "$logfile" 2>/dev/null)"
+    if [ -n "$pid" ]; then
+        pid="$(ps -h -opid,comm $pid | grep $progname | cut -d\  -f1)"
+        [ -n "$pid" ] && opt="-f --pid=$pid"
+    fi
+    do_echo tail $opt $logfile
+}
 
 set -e
 
+progname=$(basename $0)
 func=cmd_$1
 type $func >/dev/null 2>&1 || { echo utils $1 is not exists.; exit 2; }
 
