@@ -47,8 +47,8 @@ cmd_build()
         esac
     done
 
-    opt="KBUILD_BUILD_USER=$user $opt"
-    opt="KBUILD_BUILD_HOST=$host $opt"
+    opt="CONFIG_KERNEL_BUILD_USER=$user $opt"
+    opt="CONFIG_KERNEL_BUILD_DOMAIN=$host $opt"
     opt="BUILD_LOG=1 $opt"
 
     if [ -n "$destdir" ]; then
@@ -68,8 +68,8 @@ cmd_build()
     if [ -n "$foreground" ]; then
         do_build $opt "$@"
     else
-        (exec 1>$logfile;exec 2>&1;exec 0</dev/null;do_build $opt "$@") &
-        do_echo tail --pid=$! -f $logfile
+        (exec 1>$destdir/$logfile;exec 2>&1;exec 0</dev/null;do_build $opt "$@") &
+        do_echo tail --pid=$! -f $destdir/$logfile
     fi
 }
 
