@@ -16,14 +16,14 @@ do_echo()
 
 do_build()
 {
-    echo make "$@"
     local d1=`date +%s`
-    date '+%Y-%m-%d %H:%M:%S' --date=@$d1
-    make "$@"
+    do_echo make $opt oldconfig </dev/null 2>/dev/null
+    date '+==start==%Y-%m-%d %H:%M:%S %z==' --date=@$d1
+    do_echo make "$@"
     local d2=`date +%s`
-    date '+%Y-%m-%d %H:%M:%S' --date=@$d2
+    date '+==stop==%Y-%m-%d %H:%M:%S %z==' --date=@$d2
     local dt=$((d2 - d1))
-    date -u '+%H:%M:%S' --date=@$dt
+    date -u '+==spend==%H:%M:%S==' --date=@$dt
 }
 
 cmd_build()
@@ -64,11 +64,10 @@ cmd_build()
         do_echo cp -f "$cfgfile" "$destdir/.config"
     fi
 
-    do_echo make $opt oldconfig 0</dev/null
     if [ -n "$foreground" ]; then
         do_build $opt "$@"
     else
-        (exec 1>$destdir/$logfile;exec 2>&1;exec 0</dev/null;do_build $opt "$@") &
+        (exec 1>$destdir/$logfile;exec 2>&1;exec </dev/null;do_build $opt "$@") &
         do_echo tail --pid=$! -f $destdir/$logfile
     fi
 }
@@ -130,7 +129,7 @@ cmd_menuconfig()
     [ -n "$cfgfile" ] || { [ -n "$new" ] && do_echo rm -f $destdir/.config; }
 
     do_echo make $opt menuconfig "$@"
-    do_echo make $opt oldconfig "$@" 0</dev/null
+    do_echo make $opt oldconfig "$@" </dev/null 2>/dev/null
     if [ -n "$diff" ]; then
         do_echo sh -c "cd '$destdir'; ./scripts/diffconfig.sh > .config.new"
     else
@@ -165,7 +164,7 @@ cmd_oldconfig()
         do_echo cp -f "$cfgfile" "$destdir/.config"
     fi
 
-    do_echo make $opt oldconfig "$@" 0</dev/null
+    do_echo make $opt oldconfig "$@" </dev/null 2>/dev/null
     if [ -n "$diff" ]; then
         do_echo sh -c "cd '$destdir'; ./scripts/diffconfig.sh > .config.new"
     else
