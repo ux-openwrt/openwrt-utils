@@ -86,6 +86,8 @@ cmd_mklink()
     destdir2=$(mkdir -p "$destdir";cd "$destdir";echo -n $PWD;cd - >/dev/null;rm -d "$destdir")
     do_echo sh -c "cd '$srcdir'; ./scripts/symlink-tree.sh '$destdir2/'"
     [ -d "$srcdir/feeds" ] && do_echo sh -c "cd '$srcdir'; ln -s \"\$PWD/feeds\" '$destdir2/'"
+    [ -f "$srcdir/version" ] && do_echo sh -c "cd '$srcdir'; ln -s \"\$PWD/version\" '$destdir2/'"
+    [ -f "$srcdir/version.date" ] && do_echo sh -c "cd '$srcdir'; ln -s \"\$PWD/version.date\" '$destdir2/'"
     #[ -L "$destdir/.git" ] && do_echo rm -f "$destdir/.git"
 }
 
