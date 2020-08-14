@@ -23,7 +23,7 @@ do_build()
     local d2=`date +%s`
     date '+==stop==%Y-%m-%d %H:%M:%S %z==' --date=@$d2
     local dt=$((d2 - d1))
-    date -u '+==spend==%H:%M:%S==' --date=@$dt
+    date -u '+==time==%H:%M:%S==' --date=@$dt
 }
 
 cmd_build()
