@@ -50,7 +50,7 @@ cmd_build()
     opt="CONFIG_KERNEL_BUILD_USER=$user $opt"
     opt="CONFIG_KERNEL_BUILD_DOMAIN=$host $opt"
     echo "$*" | grep -Eq '(^B| B)UILD_LOG=' || opt="BUILD_LOG=1 $opt"
-    echo "$*" | grep -Eq '(^Q| Q)UILT=' || opt="QUILT=1 $opt"
+    #echo "$*" | grep -Eq '(^Q| Q)UILT=' || opt="QUILT=1 $opt"
     echo "$*" | grep -Eq '(^V| V)=' || opt="V=s $opt"
 
     if [ -n "$destdir" ]; then
